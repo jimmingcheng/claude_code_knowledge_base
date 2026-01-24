@@ -2,7 +2,7 @@
 name: kb-agent
 description: Project knowledge base management and memory system. Use proactively for knowledge queries, memory storage, conflict resolution, and project understanding.
 tools: Bash, Read, Write, Glob, Grep
-model: sonnet
+model: opus
 permissionMode: acceptEdits
 ---
 
