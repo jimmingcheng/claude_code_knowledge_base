@@ -293,6 +293,140 @@ export class KnowledgeBase {
   }
 
   /**
+   * Removes a fact by its ID.
+   */
+  removeFactById(id: number): boolean {
+    const fact = this.findFactById(id);
+    if (fact) {
+      return this.removeFact(fact);
+    }
+    return false;
+  }
+
+  /**
+   * Updates an existing fact by ID. Returns the updated fact or null if not found.
+   */
+  updateFact(id: number, content: string, topicNames: Set<string>, sources: Set<Source>): Fact | null {
+    const existingIndex = this.facts.findIndex(f => f.id === id);
+    if (existingIndex >= 0) {
+      // Ensure all topics exist, create them if they don't
+      for (const topicName of topicNames) {
+        this.createTopic(topicName, `Auto-created topic: ${topicName}`);
+      }
+
+      const updatedFact = new Fact(id, content, topicNames, sources);
+      this.facts[existingIndex] = updatedFact;
+      this.saveFacts();
+      return updatedFact;
+    }
+    return null;
+  }
+
+  /**
+   * Updates an existing topic's description. Returns the updated topic or null if not found.
+   */
+  updateTopic(name: string, newDescription: string): Topic | null {
+    const existingIndex = this.topics.findIndex(t => t.name === name);
+    if (existingIndex >= 0) {
+      const updatedTopic = new Topic(name, newDescription);
+      this.topics[existingIndex] = updatedTopic;
+      this.saveTopics();
+      return updatedTopic;
+    }
+    return null;
+  }
+
+  /**
+   * Merges a source topic into a target topic, updating all facts that reference the source topic.
+   * Returns true if successful, false if source or target topic doesn't exist.
+   */
+  mergeTopics(sourceTopicName: string, targetTopicName: string): boolean {
+    const sourceTopic = this.findTopicByName(sourceTopicName);
+    const targetTopic = this.findTopicByName(targetTopicName);
+
+    if (!sourceTopic || !targetTopic) {
+      return false;
+    }
+
+    // Update all facts that reference the source topic
+    let factsUpdated = 0;
+    this.facts.forEach((fact, index) => {
+      if (fact.hasTopicName(sourceTopicName)) {
+        // Create new topic set replacing source with target
+        const newTopics = new Set<string>();
+        for (const topicName of fact.topics) {
+          if (topicName === sourceTopicName) {
+            newTopics.add(targetTopicName);
+          } else {
+            newTopics.add(topicName);
+          }
+        }
+
+        // Update the fact with new topics
+        this.facts[index] = new Fact(fact.id, fact.content, newTopics, fact.sources);
+        factsUpdated++;
+      }
+    });
+
+    // Remove the source topic
+    this.removeTopicByName(sourceTopicName);
+
+    // Save changes
+    if (factsUpdated > 0) {
+      this.saveFacts();
+    }
+
+    return true;
+  }
+
+  /**
+   * Renames a topic, updating all facts that reference it.
+   * Returns true if successful, false if the old topic doesn't exist or new name already exists.
+   */
+  renameTopic(oldName: string, newName: string): boolean {
+    const oldTopic = this.findTopicByName(oldName);
+    const existingNewTopic = this.findTopicByName(newName);
+
+    if (!oldTopic || existingNewTopic) {
+      return false;
+    }
+
+    // Create new topic with the new name and same description
+    const newTopic = new Topic(newName, oldTopic.description);
+    this.upsertTopic(newTopic);
+
+    // Update all facts that reference the old topic
+    let factsUpdated = 0;
+    this.facts.forEach((fact, index) => {
+      if (fact.hasTopicName(oldName)) {
+        // Create new topic set replacing old name with new name
+        const newTopics = new Set<string>();
+        for (const topicName of fact.topics) {
+          if (topicName === oldName) {
+            newTopics.add(newName);
+          } else {
+            newTopics.add(topicName);
+          }
+        }
+
+        // Update the fact with new topics
+        this.facts[index] = new Fact(fact.id, fact.content, newTopics, fact.sources);
+        factsUpdated++;
+      }
+    });
+
+    // Remove the old topic
+    this.removeTopicByName(oldName);
+
+    // Save changes
+    if (factsUpdated > 0) {
+      this.saveFacts();
+    }
+
+    return true;
+  }
+
+  /**
    * Returns statistics about the knowledge base.
    */
   getStats(): {
