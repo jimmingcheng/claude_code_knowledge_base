@@ -1,0 +1,37 @@
+{
+  "name": "claude-code-knowledge-base",
+  "version": "1.0.0",
+  "description": "TypeScript-based knowledge base system for Claude Code",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "claude-kb": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/cli.js",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "clean": "rm -rf dist coverage",
+    "prebuild": "npm run clean"
+  },
+  "keywords": [
+    "knowledge-base",
+    "typescript",
+    "claude-code"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
