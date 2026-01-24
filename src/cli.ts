@@ -10,11 +10,10 @@ function main() {
   if (!command) {
     console.log('Usage: claude-kb <command> [args...]');
     console.log('Commands:');
-    console.log('  search <query>        - Search facts by content');
     console.log('  stats                 - Show knowledge base statistics');
     console.log('  list-topics           - List all topics');
     console.log('  list-facts            - List all facts');
-    console.log('  facts-by-topic <topic> - Get facts with specific topic name');
+    console.log('  facts-by-topics <topic1,topic2,...> - Get facts matching any of the specified topics');
     console.log('  add-fact <content> [topic1,topic2,...] [source1,source2,...]');
     console.log('  add-topic <name> <description>');
     console.log('');
@@ -33,17 +32,6 @@ function main() {
   const kb = createKnowledgeBase(kbPath);
 
   switch (command) {
-    case 'search': {
-      const query = args[1];
-      if (!query) {
-        console.error('Please provide a search query');
-        return;
-      }
-      const results = kb.searchFactsByContent(query);
-      console.log(JSON.stringify(results.map(f => f.toObject()), null, 2));
-      break;
-    }
-
     case 'stats': {
       const stats = kb.getStats();
       console.log(JSON.stringify(stats, null, 2));
@@ -62,15 +50,20 @@ function main() {
       break;
     }
 
-    case 'facts-by-topic': {
-      const topicName = args[1];
-      if (!topicName) {
-        console.error('Please provide a topic name');
+    case 'facts-by-topics': {
+      const topicsArg = args[1];
+      if (!topicsArg) {
+        console.error('Please provide topic names (comma-separated)');
         return;
       }
-      const facts = kb.getFactsByTopicNames([topicName]);
+      const topicNames = topicsArg.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      if (topicNames.length === 0) {
+        console.error('Please provide at least one valid topic name');
+        return;
+      }
+      const facts = kb.getFactsByTopicNames(topicNames);
       if (facts.length === 0) {
-        console.log(`No facts found for topic "${topicName}"`);
+        console.log(`No facts found for topics: ${topicNames.join(', ')}`);
         return;
       }
       console.log(JSON.stringify(facts.map(f => f.toObject()), null, 2));
