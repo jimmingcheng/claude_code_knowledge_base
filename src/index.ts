@@ -3,6 +3,7 @@
 export { Topic } from './Topic';
 export { Fact, Source } from './Fact';
 export { KnowledgeBase } from './KnowledgeBase';
+export { KnowledgeAgent, type ConflictAnalysis } from './KnowledgeAgent';
 
 // Re-export types for convenience
 export type { Source as SourceType } from './Fact';
