@@ -6,5 +6,8 @@
     "name": "Jimming Cheng",
     "email": "jimming@gmail.com"
   },
-  "agents": ["./agents/kb-agent.md"]
+  "agents": [
+    "./agents/kb-query-agent.md",
+    "./agents/kb-manage-agent.md"
+  ]
 }
