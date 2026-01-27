@@ -197,14 +197,14 @@ export class KnowledgeBase {
   /**
    * Creates a new topic. If a topic with the same name already exists, returns the existing one.
    */
-  createTopic(name: string, description: string): Topic {
+  createTopic(name: string, description: string, isInferred: boolean = false): Topic {
     // Check if topic already exists
     const existingTopic = this.findTopicByName(name);
     if (existingTopic) {
       return existingTopic;
     }
 
-    const topic = new Topic(name, description);
+    const topic = new Topic(name, description, isInferred);
     this.upsertTopic(topic);
     return topic;
   }
@@ -216,7 +216,7 @@ export class KnowledgeBase {
   createFact(content: string, topicNames: Set<string>, sources: Set<Source>): Fact {
     // Ensure all topics exist, create them if they don't
     for (const topicName of topicNames) {
-      this.createTopic(topicName, `Auto-created topic: ${topicName}`);
+      this.createTopic(topicName, `Auto-created topic: ${topicName}`, true);
     }
 
     const id = this.getNextFactId();
@@ -311,7 +311,7 @@ export class KnowledgeBase {
     if (existingIndex >= 0) {
       // Ensure all topics exist, create them if they don't
       for (const topicName of topicNames) {
-        this.createTopic(topicName, `Auto-created topic: ${topicName}`);
+        this.createTopic(topicName, `Auto-created topic: ${topicName}`, true);
       }
 
       const updatedFact = new Fact(id, content, topicNames, sources);
@@ -328,7 +328,9 @@ export class KnowledgeBase {
   updateTopic(name: string, newDescription: string): Topic | null {
     const existingIndex = this.topics.findIndex(t => t.name === name);
     if (existingIndex >= 0) {
-      const updatedTopic = new Topic(name, newDescription);
+      const existingTopic = this.topics[existingIndex];
+      // Preserve the isInferred value from the existing topic
+      const updatedTopic = new Topic(name, newDescription, existingTopic.isInferred);
       this.topics[existingIndex] = updatedTopic;
       this.saveTopics();
       return updatedTopic;
@@ -391,8 +393,8 @@ export class KnowledgeBase {
       return false;
     }
 
-    // Create new topic with the new name and same description
-    const newTopic = new Topic(newName, oldTopic.description);
+    // Create new topic with the new name, same description, and preserve isInferred value
+    const newTopic = new Topic(newName, oldTopic.description, oldTopic.isInferred);
     this.upsertTopic(newTopic);
 
     // Update all facts that reference the old topic

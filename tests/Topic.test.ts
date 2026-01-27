@@ -8,6 +8,25 @@ describe('Topic', () => {
       expect(topic.id).toBe('Programming');
       expect(topic.name).toBe('Programming');
       expect(topic.description).toBe('Programming concepts and techniques');
+      expect(topic.isInferred).toBe(false); // Default value
+    });
+
+    it('should create a topic with isInferred set to true', () => {
+      const topic = new Topic('Auto-Generated', 'Auto-generated topic', true);
+
+      expect(topic.id).toBe('Auto-Generated');
+      expect(topic.name).toBe('Auto-Generated');
+      expect(topic.description).toBe('Auto-generated topic');
+      expect(topic.isInferred).toBe(true);
+    });
+
+    it('should create a topic with isInferred explicitly set to false', () => {
+      const topic = new Topic('User-Created', 'User-created topic', false);
+
+      expect(topic.id).toBe('User-Created');
+      expect(topic.name).toBe('User-Created');
+      expect(topic.description).toBe('User-created topic');
+      expect(topic.isInferred).toBe(false);
     });
 
     it('should create a topic with empty description', () => {
@@ -16,6 +35,7 @@ describe('Topic', () => {
       expect(topic.id).toBe('TypeScript');
       expect(topic.name).toBe('TypeScript');
       expect(topic.description).toBe('');
+      expect(topic.isInferred).toBe(false); // Default value
     });
 
     it('should handle special characters in name and description', () => {
@@ -24,6 +44,7 @@ describe('Topic', () => {
       expect(topic.id).toBe('Topic with "quotes"');
       expect(topic.name).toBe('Topic with "quotes"');
       expect(topic.description).toBe('Description with émojis 🚀');
+      expect(topic.isInferred).toBe(false); // Default value
     });
 
     it('should use name as ID', () => {
@@ -31,6 +52,7 @@ describe('Topic', () => {
 
       expect(topic.id).toBe(topic.name);
       expect(topic.id).toBe('React-Hooks');
+      expect(topic.isInferred).toBe(false); // Default value
     });
   });
 
@@ -47,6 +69,39 @@ describe('Topic', () => {
       expect(topic.id).toBe('JavaScript');
       expect(topic.name).toBe('JavaScript');
       expect(topic.description).toBe('JavaScript language and ecosystem');
+      expect(topic.isInferred).toBe(false); // Default when not specified
+    });
+
+    it('should create topic with isInferred true from object', () => {
+      const obj = {
+        id: 'Auto-Topic',
+        description: 'Automatically inferred topic',
+        isInferred: true
+      };
+
+      const topic = Topic.fromObject(obj);
+
+      expect(topic).toBeInstanceOf(Topic);
+      expect(topic.id).toBe('Auto-Topic');
+      expect(topic.name).toBe('Auto-Topic');
+      expect(topic.description).toBe('Automatically inferred topic');
+      expect(topic.isInferred).toBe(true);
+    });
+
+    it('should create topic with isInferred false from object', () => {
+      const obj = {
+        id: 'User-Topic',
+        description: 'User-requested topic',
+        isInferred: false
+      };
+
+      const topic = Topic.fromObject(obj);
+
+      expect(topic).toBeInstanceOf(Topic);
+      expect(topic.id).toBe('User-Topic');
+      expect(topic.name).toBe('User-Topic');
+      expect(topic.description).toBe('User-requested topic');
+      expect(topic.isInferred).toBe(false);
     });
 
     it('should handle empty description in object', () => {
@@ -60,6 +115,7 @@ describe('Topic', () => {
       expect(topic.id).toBe('EmptyDesc');
       expect(topic.name).toBe('EmptyDesc');
       expect(topic.description).toBe('');
+      expect(topic.isInferred).toBe(false); // Default when not specified
     });
 
     it('should preserve special characters from object', () => {
@@ -73,6 +129,7 @@ describe('Topic', () => {
       expect(topic.id).toBe('Topic/with\\special*chars');
       expect(topic.name).toBe('Topic/with\\special*chars');
       expect(topic.description).toBe('Line 1\nLine 2\tTabbed');
+      expect(topic.isInferred).toBe(false); // Default when not specified
     });
   });
 
@@ -84,7 +141,20 @@ describe('Topic', () => {
 
       expect(obj).toEqual({
         id: 'Web-Development',
-        description: 'Web development practices and tools'
+        description: 'Web development practices and tools',
+        isInferred: false
+      });
+    });
+
+    it('should convert inferred topic to plain object', () => {
+      const topic = new Topic('Auto-Created', 'Auto-created topic', true);
+
+      const obj = topic.toObject();
+
+      expect(obj).toEqual({
+        id: 'Auto-Created',
+        description: 'Auto-created topic',
+        isInferred: true
       });
     });
 
@@ -107,6 +177,14 @@ describe('Topic', () => {
       const result = topic.toString();
 
       expect(result).toBe('Topic(name="React")');
+    });
+
+    it('should return formatted string with inferred flag for auto-created topics', () => {
+      const topic = new Topic('Auto-React', 'Auto-created React topic', true);
+
+      const result = topic.toString();
+
+      expect(result).toBe('Topic(name="Auto-React" [inferred])');
     });
 
     it('should handle quotes in name', () => {
@@ -133,6 +211,14 @@ describe('Topic', () => {
 
       expect(topic1.equals(topic2)).toBe(true);
       expect(topic2.equals(topic1)).toBe(true);
+    });
+
+    it('should return true for topics with same name regardless of isInferred flag', () => {
+      const userTopic = new Topic('JavaScript', 'User-created topic', false);
+      const inferredTopic = new Topic('JavaScript', 'Auto-created topic', true);
+
+      expect(userTopic.equals(inferredTopic)).toBe(true);
+      expect(inferredTopic.equals(userTopic)).toBe(true);
     });
 
     it('should return false for topics with different names', () => {
@@ -210,6 +296,23 @@ describe('Topic', () => {
       const originalData = {
         id: 'DevOps',
         description: 'DevOps practices and tooling'
+      };
+
+      const topic = Topic.fromObject(originalData);
+      const serialized = topic.toObject();
+
+      expect(serialized).toEqual({
+        id: 'DevOps',
+        description: 'DevOps practices and tooling',
+        isInferred: false // Default value added during serialization
+      });
+    });
+
+    it('should maintain data integrity for inferred topics through roundtrip', () => {
+      const originalData = {
+        id: 'Auto-DevOps',
+        description: 'Auto-created DevOps topic',
+        isInferred: true
       };
 
       const topic = Topic.fromObject(originalData);

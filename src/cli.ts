@@ -15,7 +15,7 @@ function main() {
     console.log('  list-facts            - List all facts');
     console.log('  facts-by-topics <topic1,topic2,...> - Get facts matching any of the specified topics');
     console.log('  add-fact <content> [topic1,topic2,...] [source1,source2,...]');
-    console.log('  add-topic <name> <description>');
+    console.log('  add-topic <name> <description> [isInferred]');
     console.log('');
     console.log('CRUD Operations:');
     console.log('  update-fact <id> <content> [topic1,topic2,...] [source1,source2,...]');
@@ -40,7 +40,7 @@ function main() {
 
     case 'list-topics': {
       const topics = kb.getAllTopics();
-      console.log(JSON.stringify(topics, null, 2));
+      console.log(JSON.stringify(topics.map(t => t.toObject()), null, 2));
       break;
     }
 
@@ -89,15 +89,22 @@ function main() {
     case 'add-topic': {
       const name = args[1];
       const description = args[2] || '';
+      const isInferredArg = args[3];
 
       if (!name) {
         console.error('Please provide topic name');
         return;
       }
 
-      const topic = kb.createTopic(name, description);
-      console.log(`Created topic: ${topic.name}`);
-      console.log(JSON.stringify(topic, null, 2));
+      // Parse isInferred parameter (defaults to false for user-created topics)
+      let isInferred = false;
+      if (isInferredArg !== undefined) {
+        isInferred = isInferredArg.toLowerCase() === 'true';
+      }
+
+      const topic = kb.createTopic(name, description, isInferred);
+      console.log(`Created topic: ${topic.name}${topic.isInferred ? ' [inferred]' : ''}`);
+      console.log(JSON.stringify(topic.toObject(), null, 2));
       break;
     }
 

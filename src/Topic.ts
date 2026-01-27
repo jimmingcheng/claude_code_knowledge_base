@@ -5,10 +5,12 @@
 export class Topic {
   public readonly id: string; // The topic name serves as the ID
   public readonly description: string;
+  public readonly isInferred: boolean; // True if auto-created by agent, false if user-requested
 
-  constructor(name: string, description: string) {
+  constructor(name: string, description: string, isInferred: boolean = false) {
     this.id = name; // Use name as the unique identifier
     this.description = description;
+    this.isInferred = isInferred;
   }
 
   /**
@@ -20,12 +22,14 @@ export class Topic {
 
   /**
    * Creates a Topic instance from a plain object (e.g., from JSON data).
+   * Provides backward compatibility for data without isInferred field.
    */
   static fromObject(obj: {
     id: string;
     description: string;
+    isInferred?: boolean;
   }): Topic {
-    return new Topic(obj.id, obj.description);
+    return new Topic(obj.id, obj.description, obj.isInferred ?? false);
   }
 
   /**
@@ -34,10 +38,12 @@ export class Topic {
   toObject(): {
     id: string;
     description: string;
+    isInferred: boolean;
   } {
     return {
       id: this.id,
       description: this.description,
+      isInferred: this.isInferred,
     };
   }
 
@@ -45,7 +51,8 @@ export class Topic {
    * Returns a string representation of the topic.
    */
   toString(): string {
-    return `Topic(name="${this.name}")`;
+    const inferredFlag = this.isInferred ? " [inferred]" : "";
+    return `Topic(name="${this.name}"${inferredFlag})`;
   }
 
   /**
