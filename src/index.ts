@@ -11,7 +11,7 @@ export type { Source as SourceType } from './Fact';
 import { KnowledgeBase } from './KnowledgeBase';
 
 // Version information
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 // Utility function to create a new knowledge base with initialization
 export function createKnowledgeBase(kbPath: string): KnowledgeBase {
