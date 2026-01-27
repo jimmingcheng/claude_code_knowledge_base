@@ -85,26 +85,32 @@ When performing full knowledge base analysis:
 **Finding the claude-kb CLI Tool:**
 The knowledge base CLI tool needs to be located before use. Try these paths in order:
 
-1. **Local node_modules**: `node_modules/@claude-code/kb-plugin/bin/claude-kb` (npm install)
-2. **Current directory search**: `find . -name "claude-kb" -type f -executable 2>/dev/null | head -1`
-3. **System-wide search**: `find $HOME -name "claude-kb" -type f -executable 2>/dev/null | head -1`
-4. **PATH search**: `which claude-kb` (if globally installed)
+1. **Plugin directory**: `./bin/claude-kb` (Claude Code plugin environment)
+2. **Local node_modules**: `node_modules/@claude-code/kb-plugin/bin/claude-kb` (npm install)
+3. **Current directory search**: `find . -name "claude-kb" -type f -executable 2>/dev/null | head -1`
+4. **System-wide search**: `find $HOME -name "claude-kb" -type f -executable 2>/dev/null | head -1`
+5. **PATH search**: `which claude-kb` (if globally installed)
 
 **Path Resolution Process:**
 ```bash
-# Try common installation paths first
-if [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
-    KB_CLI="node_modules/@claude-code/kb-plugin/bin/claude-kb"
+# Try the simple plugin path first (fastest when it works)
+if [[ -x "./bin/claude-kb" ]]; then
+    KB_CLI="./bin/claude-kb"
 else
-    # Search current directory tree for the binary
-    KB_CLI=$(find . -name "claude-kb" -type f -executable 2>/dev/null | head -1)
-    if [[ -z "$KB_CLI" ]]; then
-        # Search user home directory (for plugin cache)
-        KB_CLI=$(find $HOME -name "claude-kb" -type f -executable 2>/dev/null | head -1)
-    fi
-    if [[ -z "$KB_CLI" ]]; then
-        # Try PATH lookup
-        KB_CLI=$(which claude-kb 2>/dev/null)
+    # Fall back to dynamic resolution for development and npm installation
+    if [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
+        KB_CLI="node_modules/@claude-code/kb-plugin/bin/claude-kb"
+    else
+        # Search current directory tree for the binary
+        KB_CLI=$(find . -name "claude-kb" -type f -executable 2>/dev/null | head -1)
+        if [[ -z "$KB_CLI" ]]; then
+            # Search user home directory (for plugin cache)
+            KB_CLI=$(find $HOME -name "claude-kb" -type f -executable 2>/dev/null | head -1)
+        fi
+        if [[ -z "$KB_CLI" ]]; then
+            # Try PATH lookup
+            KB_CLI=$(which claude-kb 2>/dev/null)
+        fi
     fi
 fi
 ```
