@@ -85,26 +85,26 @@ When performing full knowledge base analysis:
 **Finding the claude-kb CLI Tool:**
 The knowledge base CLI tool needs to be located before use. Try these paths in order:
 
-1. **Primary**: `$KB_CLI`
-2. **Fallback 1**: `node_modules/@claude-code/kb-plugin/bin/claude-kb` (if installed via npm)
-3. **Fallback 2**: Search using: `find . -name "claude-kb" -type f -executable 2>/dev/null | head -1`
-4. **Manual Discovery**: Use `find` or `locate` commands to search for the claude-kb binary
+1. **Local node_modules**: `node_modules/@claude-code/kb-plugin/bin/claude-kb` (npm install)
+2. **Current directory search**: `find . -name "claude-kb" -type f -executable 2>/dev/null | head -1`
+3. **System-wide search**: `find $HOME -name "claude-kb" -type f -executable 2>/dev/null | head -1`
+4. **PATH search**: `which claude-kb` (if globally installed)
 
 **Path Resolution Process:**
 ```bash
-# Try primary path first
-if [[ -x "${CLAUDE_PLUGIN_ROOT}/bin/claude-kb" ]]; then
-    KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
-# Try fallback paths
-elif [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
+# Try common installation paths first
+if [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
     KB_CLI="node_modules/@claude-code/kb-plugin/bin/claude-kb"
 else
-    # Search for the binary (first try with executable flag)
+    # Search current directory tree for the binary
     KB_CLI=$(find . -name "claude-kb" -type f -executable 2>/dev/null | head -1)
     if [[ -z "$KB_CLI" ]]; then
-        # Fallback: search without executable flag and verify manually
-        KB_CLI=$(find . -name "claude-kb" -type f 2>/dev/null | head -1)
-        [[ -n "$KB_CLI" && -x "$KB_CLI" ]] || KB_CLI=""
+        # Search user home directory (for plugin cache)
+        KB_CLI=$(find $HOME -name "claude-kb" -type f -executable 2>/dev/null | head -1)
+    fi
+    if [[ -z "$KB_CLI" ]]; then
+        # Try PATH lookup
+        KB_CLI=$(which claude-kb 2>/dev/null)
     fi
 fi
 ```
