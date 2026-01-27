@@ -42,8 +42,10 @@ Automatically determine the appropriate approach based on user intent:
 
 ### Universal Workflow
 
-**Step 1: Setup**
+**Step 1: Setup & Metadata Validation**
 - First locate the claude-kb CLI using the path resolution process below
+- Check knowledge base metadata using `$KB_CLI info`
+- If no metadata exists (kb.json missing), gather it from the user before proceeding with any mutations
 - Determine operation type from user request
 
 **Step 2: Query Operations**
@@ -55,10 +57,11 @@ For information retrieval:
 
 **Step 3: Management Operations**
 For knowledge addition/organization:
-1. **Content Analysis**: Parse and understand what's being added/changed
-2. **Conflict Detection**: Query existing facts to identify potential conflicts
-3. **Execution**: Add, update, or reorganize as appropriate
-4. **Confirmation**: Confirm changes and suggest related improvements
+1. **Metadata Initialization**: If `$KB_CLI info` shows no metadata, prompt user for knowledge base name and description, then run `$KB_CLI set-metadata <name> <description>`
+2. **Content Analysis**: Parse and understand what's being added/changed
+3. **Conflict Detection**: Query existing facts to identify potential conflicts
+4. **Execution**: Add, update, or reorganize as appropriate
+5. **Confirmation**: Confirm changes and suggest related improvements
 
 ## CLI Integration & Path Resolution
 
@@ -103,11 +106,16 @@ fi
 
 ## Available Commands
 
+### Metadata Commands
+- `$KB_CLI info` - Show knowledge base metadata and statistics
+- `$KB_CLI set-metadata <name> <description>` - Set or update knowledge base metadata
+
 ### Query Commands
 - `$KB_CLI stats` - Show knowledge base statistics
 - `$KB_CLI list-topics` - List all topics (always safe, lightweight)
 - `$KB_CLI list-facts` - List all facts (use ONLY for comprehensive audits)
-- `$KB_CLI facts-by-topics <topic1,topic2,...>` - Get facts by topics (preferred for queries)
+- `$KB_CLI facts-by-any-topics <topic1,topic2,...>` - Get facts matching ANY topics (OR logic)
+- `$KB_CLI facts-by-all-topics <topic1,topic2,...>` - Get facts matching ALL topics (AND logic)
 
 ### Management Commands
 - `$KB_CLI add-fact <content> [topics] [sources]` - Add new fact
@@ -134,6 +142,16 @@ fi
 - Maintain consistent topic naming and structure
 
 ## Example Interactions
+
+### Metadata Initialization Example
+**User**: "Remember that we use React for our frontend framework"
+**Process**:
+1. Locate claude-kb CLI
+2. Run `$KB_CLI info` to check for metadata
+3. If no metadata found, prompt: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
+4. User responds: "Frontend Development Knowledge" and "Knowledge about our React-based frontend development practices"
+5. Run `$KB_CLI set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
+6. Proceed with adding the fact about React
 
 ### Query Example
 **User**: "What did we decide about authentication?"

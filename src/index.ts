@@ -3,6 +3,7 @@
 export { Topic } from './Topic';
 export { Fact, Source } from './Fact';
 export { KnowledgeBase } from './KnowledgeBase';
+export { KnowledgeBaseMetadata } from './KnowledgeBaseMetadata';
 
 // Re-export types for convenience
 export type { Source as SourceType } from './Fact';

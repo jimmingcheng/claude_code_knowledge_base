@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Topic } from './Topic';
 import { Fact, Source } from './Fact';
+import { KnowledgeBaseMetadata } from './KnowledgeBaseMetadata';
 
 /**
  * Main knowledge base class that manages topics and facts.
@@ -11,9 +12,11 @@ export class KnowledgeBase {
   private readonly kbPath: string;
   private topics: Topic[];
   private facts: Fact[];
+  private metadata: KnowledgeBaseMetadata | null;
 
   constructor(kbPath: string) {
     this.kbPath = kbPath;
+    this.metadata = this.loadMetadata(path.join(kbPath, 'kb.json'));
     this.topics = this.loadTopics(path.join(kbPath, 'topics.json'));
     this.facts = this.loadFacts(path.join(kbPath, 'facts.json'));
   }
@@ -43,6 +46,20 @@ export class KnowledgeBase {
     } catch (error) {
       console.warn(`Could not load facts from ${factsJsonPath}:`, error);
       return [];
+    }
+  }
+
+  /**
+   * Loads metadata from the kb.json file.
+   */
+  private loadMetadata(metadataJsonPath: string): KnowledgeBaseMetadata | null {
+    try {
+      const fileContent = fs.readFileSync(metadataJsonPath, 'utf-8');
+      const metadataData = JSON.parse(fileContent);
+      return KnowledgeBaseMetadata.fromObject(metadataData);
+    } catch (error) {
+      console.warn(`Could not load metadata from ${metadataJsonPath}:`, error);
+      return null;
     }
   }
 
@@ -77,6 +94,25 @@ export class KnowledgeBase {
   }
 
   /**
+   * Saves metadata to the kb.json file.
+   */
+  private saveMetadata(): void {
+    if (!this.metadata) {
+      return; // Don't save if no metadata exists
+    }
+
+    // Ensure directory exists
+    if (!fs.existsSync(this.kbPath)) {
+      fs.mkdirSync(this.kbPath, { recursive: true });
+    }
+
+    const metadataJsonPath = path.join(this.kbPath, 'kb.json');
+    const metadataData = this.metadata.toObject();
+    const jsonContent = JSON.stringify(metadataData, null, 2);
+    fs.writeFileSync(metadataJsonPath, jsonContent, 'utf-8');
+  }
+
+  /**
    * Returns all topics in the knowledge base.
    */
   getAllTopics(): Topic[] {
@@ -88,6 +124,29 @@ export class KnowledgeBase {
    */
   getAllFacts(): Fact[] {
     return [...this.facts]; // Return a copy to prevent external modification
+  }
+
+  /**
+   * Returns the knowledge base metadata.
+   */
+  getMetadata(): KnowledgeBaseMetadata | null {
+    return this.metadata;
+  }
+
+  /**
+   * Checks if the knowledge base has metadata (kb.json exists and is loaded).
+   */
+  hasMetadata(): boolean {
+    return this.metadata !== null;
+  }
+
+  /**
+   * Sets the knowledge base metadata and saves it to kb.json.
+   */
+  setMetadata(name: string, description: string): KnowledgeBaseMetadata {
+    this.metadata = new KnowledgeBaseMetadata(name, description);
+    this.saveMetadata();
+    return this.metadata;
   }
 
   /**

@@ -10,6 +10,8 @@ function main() {
   if (!command) {
     console.log('Usage: claude-kb <command> [args...]');
     console.log('Commands:');
+    console.log('  info                  - Show knowledge base metadata and statistics');
+    console.log('  set-metadata <name> <description> - Set or update knowledge base metadata');
     console.log('  stats                 - Show knowledge base statistics');
     console.log('  list-topics           - List all topics');
     console.log('  list-facts            - List all facts');
@@ -33,6 +35,43 @@ function main() {
   const kb = createKnowledgeBase(kbPath);
 
   switch (command) {
+    case 'info': {
+      const metadata = kb.getMetadata();
+      const stats = kb.getStats();
+
+      console.log('=== Knowledge Base Information ===');
+      if (metadata) {
+        console.log(`Name: ${metadata.name}`);
+        console.log(`Description: ${metadata.description}`);
+      } else {
+        console.log('No metadata found (kb.json missing)');
+        console.log('Use "set-metadata <name> <description>" to initialize');
+      }
+      console.log('');
+      console.log('Statistics:');
+      console.log(`  Topics: ${stats.totalTopics}`);
+      console.log(`  Facts: ${stats.totalFacts}`);
+      console.log(`  Average topics per fact: ${stats.averageTopicsPerFact}`);
+      break;
+    }
+
+    case 'set-metadata': {
+      const name = args[1];
+      const description = args[2];
+
+      if (!name || !description) {
+        console.error('Please provide both name and description');
+        console.error('Usage: claude-kb set-metadata <name> <description>');
+        return;
+      }
+
+      const metadata = kb.setMetadata(name, description);
+      console.log('Knowledge base metadata updated:');
+      console.log(`Name: ${metadata.name}`);
+      console.log(`Description: ${metadata.description}`);
+      break;
+    }
+
     case 'stats': {
       const stats = kb.getStats();
       console.log(JSON.stringify(stats, null, 2));
