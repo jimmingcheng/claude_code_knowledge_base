@@ -13,7 +13,8 @@ function main() {
     console.log('  stats                 - Show knowledge base statistics');
     console.log('  list-topics           - List all topics');
     console.log('  list-facts            - List all facts');
-    console.log('  facts-by-topics <topic1,topic2,...> - Get facts matching any of the specified topics');
+    console.log('  facts-by-any-topics <topic1,topic2,...> - Get facts matching ANY of the specified topics (OR logic)');
+    console.log('  facts-by-all-topics <topic1,topic2,...> - Get facts matching ALL of the specified topics (AND logic)');
     console.log('  add-fact <content> [topic1,topic2,...] [source1,source2,...]');
     console.log('  add-topic <name> <description> [isInferred]');
     console.log('');
@@ -50,7 +51,7 @@ function main() {
       break;
     }
 
-    case 'facts-by-topics': {
+    case 'facts-by-any-topics': {
       const topicsArg = args[1];
       if (!topicsArg) {
         console.error('Please provide topic names (comma-separated)');
@@ -63,7 +64,49 @@ function main() {
       }
       const facts = kb.getFactsByTopicNames(topicNames);
       if (facts.length === 0) {
-        console.log(`No facts found for topics: ${topicNames.join(', ')}`);
+        console.log(`No facts found for topics (OR): ${topicNames.join(', ')}`);
+        return;
+      }
+      console.log(JSON.stringify(facts.map(f => f.toObject()), null, 2));
+      break;
+    }
+
+    case 'facts-by-all-topics': {
+      const topicsArg = args[1];
+      if (!topicsArg) {
+        console.error('Please provide topic names (comma-separated)');
+        return;
+      }
+      const topicNames = topicsArg.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      if (topicNames.length === 0) {
+        console.error('Please provide at least one valid topic name');
+        return;
+      }
+      const facts = kb.getFactsByAllTopicNames(topicNames);
+      if (facts.length === 0) {
+        console.log(`No facts found for topics (AND): ${topicNames.join(', ')}`);
+        return;
+      }
+      console.log(JSON.stringify(facts.map(f => f.toObject()), null, 2));
+      break;
+    }
+
+    // Backward compatibility: redirect old command to new one
+    case 'facts-by-topics': {
+      console.warn('Warning: "facts-by-topics" is deprecated. Use "facts-by-any-topics" for OR logic or "facts-by-all-topics" for AND logic.');
+      const topicsArg = args[1];
+      if (!topicsArg) {
+        console.error('Please provide topic names (comma-separated)');
+        return;
+      }
+      const topicNames = topicsArg.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      if (topicNames.length === 0) {
+        console.error('Please provide at least one valid topic name');
+        return;
+      }
+      const facts = kb.getFactsByTopicNames(topicNames);
+      if (facts.length === 0) {
+        console.log(`No facts found for topics (OR): ${topicNames.join(', ')}`);
         return;
       }
       console.log(JSON.stringify(facts.map(f => f.toObject()), null, 2));
