@@ -14,7 +14,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "clean": "rm -rf dist coverage",
-    "prebuild": "npm run clean"
+    "prebuild": "npm run clean",
+    "postbuild": "cp -r dist/* plugins/kb-plugin/bin/"
   },
   "keywords": [
     "knowledge-base",
