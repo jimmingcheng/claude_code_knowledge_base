@@ -27,14 +27,13 @@ elif [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
     KB_CLI="node_modules/@claude-code/kb-plugin/bin/claude-kb"
 else
     # Claude Code plugin cache (user-level installations)
-    # Claude Code caches the entire repository, so look for the plugin within it
-    if [[ -x "$HOME/.claude/plugins/cache/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb" ]]; then
-        KB_CLI="$HOME/.claude/plugins/cache/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb"
-    fi
-
-    # Alternative: Look for the built CLI in the cached repo
-    if [[ -z "$KB_CLI" && -x "$HOME/.claude/plugins/cache/claude-code-knowledge-base/dist/cli.js" ]]; then
-        KB_CLI="node $HOME/.claude/plugins/cache/claude-code-knowledge-base/dist/cli.js"
+    # Look for latest version first, then fallback to marketplace
+    if [[ -d "$HOME/.claude/plugins/cache/claude-code-knowledge-base/kb-plugin" ]]; then
+        # Find the latest version by sorting version directories
+        LATEST_VERSION=$(find "$HOME/.claude/plugins/cache/claude-code-knowledge-base/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
+        if [[ -n "$LATEST_VERSION" && -x "$LATEST_VERSION/bin/claude-kb" ]]; then
+            KB_CLI="$LATEST_VERSION/bin/claude-kb"
+        fi
     fi
 
     # Fallback to marketplace installation
