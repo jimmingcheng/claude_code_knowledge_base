@@ -1,111 +1,84 @@
 ---
 name: kb
-description: Execute knowledge base operations securely. Use for all KB commands like set-metadata, add-fact, list-topics, info, etc.
+description: "[DEPRECATED] Legacy KB skill. Use kb-query for read operations or kb-agent for mutations."
 allowed-tools: []
 argument-hint: [command] [args...]
 ---
 
-# Knowledge Base Operations
+# Knowledge Base Operations (DEPRECATED)
 
-Execute knowledge base commands securely through the Claude KB CLI.
+⚠️ **DEPRECATION NOTICE**: This skill has been replaced by a more secure architecture:
 
-## Command Execution
+- **For read-only queries**: Use the `kb-query` skill instead
+- **For content modifications**: Use the `kb-agent` agent instead
+
+## Migration Guide
+
+### For Read-Only Operations
+**Old usage:**
+```bash
+kb info
+kb list-topics
+kb facts-by-any-topics authentication,security
+```
+
+**New usage:**
+```bash
+kb-query info
+kb-query list-topics
+kb-query facts-by-any-topics authentication,security
+```
+
+### For Content Modifications
+**Old usage:**
+```bash
+kb add-fact "We use TypeScript" "typescript,tooling"
+kb add-topic "authentication" "Auth decisions" true
+kb update-fact 1 "Updated content" "topics"
+```
+
+**New usage:**
+```bash
+claude-code task kb-agent "remember that we use TypeScript for tooling"
+claude-code task kb-agent "create a topic for authentication decisions"
+claude-code task kb-agent "update fact 1 with new content"
+```
+
+## Why This Change?
+
+The new architecture provides:
+
+- **Security**: Input validation and sanitization prevents malformed data
+- **Intelligence**: kb-agent provides semantic understanding and conflict detection
+- **Performance**: Direct queries via kb-query without agent overhead
+- **Safety**: Mutations go through intelligent validation to prevent issues like malformed topic names
+
+## Automatic Redirection
 
 !`
-# Dynamic KB CLI resolution with fallback paths
+echo "⚠️  DEPRECATION WARNING: The 'kb' skill is deprecated." >&2
+echo "" >&2
+echo "Please use the new secure architecture:" >&2
+echo "  • For queries: kb-query $ARGUMENTS" >&2
+echo "  • For mutations: claude-code task kb-agent \"<your request>\"" >&2
+echo "" >&2
+echo "The new architecture prevents issues like malformed topic names" >&2
+echo "and provides intelligent input validation." >&2
+echo "" >&2
 
-# Claude Code plugin cache (user-level installations) - CHECK FIRST
-CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
-if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
-    # Find the latest version by sorting version directories
-    LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
-    if [[ -n "$LATEST_VERSION" ]]; then
-        # Prefer claude-kb binary, fallback to cli.js
-        if [[ -x "$LATEST_VERSION/bin/claude-kb" ]]; then
-            KB_CLI="$LATEST_VERSION/bin/claude-kb"
-        elif [[ -x "$LATEST_VERSION/bin/cli.js" ]]; then
-            KB_CLI="node $LATEST_VERSION/bin/cli.js"
-        fi
-    fi
-fi
+# Show which command to use
+COMMAND="$1"
+case "$COMMAND" in
+    "info"|"list-topics"|"list-facts"|"facts-by-any-topics"|"facts-by-all-topics")
+        echo "For this query operation, use: kb-query $ARGUMENTS" >&2
+        ;;
+    "add-fact"|"add-topic"|"update-fact"|"remove-fact"|"remove-topic"|"set-metadata"|"set-topic-persistence"|"merge-topics"|"rename-topic")
+        echo "For this mutation operation, use: claude-code task kb-agent \"<describe what you want to do>\"" >&2
+        ;;
+    *)
+        echo "Use kb-query for read operations or kb-agent for modifications" >&2
+        ;;
+esac
 
-# Alternative: Try specific known versions if auto-detection fails
-if [[ -z "$KB_CLI" ]]; then
-    for VERSION in "4.0.4" "4.0.3" "4.0.2" "4.0.1" "4.0.0" "3.2.0" "3.1.0"; do
-        if [[ -x "$CACHE_BASE/kb-plugin/$VERSION/bin/claude-kb" ]]; then
-            KB_CLI="$CACHE_BASE/kb-plugin/$VERSION/bin/claude-kb"
-            break
-        elif [[ -x "$CACHE_BASE/kb-plugin/$VERSION/bin/cli.js" ]]; then
-            KB_CLI="node $CACHE_BASE/kb-plugin/$VERSION/bin/cli.js"
-            break
-        fi
-    done
-fi
-
-# Fallback to marketplace installation
-if [[ -z "$KB_CLI" && -x "$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb" ]]; then
-    KB_CLI="$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb"
-fi
-
-# Project-level and package installations
-if [[ -z "$KB_CLI" ]]; then
-    if [[ -x "./bin/claude-kb" ]]; then
-        # Claude Code plugin environment
-        KB_CLI="./bin/claude-kb"
-    elif [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
-        # NPM package installation
-        KB_CLI="node_modules/@claude-code/kb-plugin/bin/claude-kb"
-    fi
-fi
-
-# Dynamic search fallbacks
-if [[ -z "$KB_CLI" ]]; then
-    # Dynamic search in current directory
-    KB_CLI=$(find . -name "claude-kb" -type f -executable 2>/dev/null | head -1)
-
-    # System PATH lookup
-    if [[ -z "$KB_CLI" ]]; then
-        KB_CLI=$(which claude-kb 2>/dev/null)
-    fi
-fi
-
-# Final error if nothing found
-if [[ -z "$KB_CLI" ]]; then
-    echo "Error: claude-kb CLI not found. Please ensure kb-plugin is properly installed." >&2
-    echo "Debug: Checked paths:" >&2
-    echo "  - $CACHE_BASE/kb-plugin/*/bin/{claude-kb,cli.js}" >&2
-    echo "  - Current directory: $PWD" >&2
-    exit 1
-fi
-
-# Debug: Show which CLI we're using
-echo "Debug: Using KB CLI at: $KB_CLI" >&2
-
-$KB_CLI $ARGUMENTS
+exit 1
 `
-
-## Available Commands
-
-**Setup & Info:**
-- `info` - Show KB metadata and statistics
-- `set-metadata <name> <description>` - Initialize KB metadata (required first)
-
-**Content Management:**
-- `add-fact <content> <topics> [sources]` - Add new fact
-- `add-topic <name> <description> [persistent]` - Add new topic
-- `update-fact <id> <content> <topics> [sources]` - Update existing fact
-- `remove-fact <id>` - Remove fact
-- `remove-topic <name>` - Remove topic
-
-**Querying:**
-- `list-topics` - Show all topics
-- `list-facts` - Show all facts
-- `facts-by-any-topics <topic1,topic2,...>` - Search facts (OR)
-- `facts-by-all-topics <topic1,topic2,...>` - Search facts (AND)
-
-**Organization:**
-- `merge-topics <source> <target>` - Merge topics
-- `rename-topic <old> <new>` - Rename topic
-- `set-topic-persistence <name> <true|false>` - Change protection
-
-All operations respect the kb.json metadata requirement and will guide you through setup if needed.
