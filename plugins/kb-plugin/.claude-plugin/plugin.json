@@ -1,7 +1,7 @@
 {
   "name": "kb-plugin",
   "description": "A general purpose knowledge base managed by a specialized intelligent agent.",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "author": {
     "name": "Jimming Cheng",
     "email": "jimming@gmail.com"
