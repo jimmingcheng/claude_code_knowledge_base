@@ -5,12 +5,12 @@
 export class Topic {
   public readonly id: string; // The topic name serves as the ID
   public readonly description: string;
-  public readonly isInferred: boolean; // True if auto-created by agent, false if user-requested
+  public readonly isPersistent: boolean; // True if user-created (persistent), false if auto-created
 
-  constructor(name: string, description: string, isInferred: boolean = false) {
+  constructor(name: string, description: string, isPersistent: boolean = false) {
     this.id = name; // Use name as the unique identifier
     this.description = description;
-    this.isInferred = isInferred;
+    this.isPersistent = isPersistent;
   }
 
   /**
@@ -22,14 +22,20 @@ export class Topic {
 
   /**
    * Creates a Topic instance from a plain object (e.g., from JSON data).
-   * Provides backward compatibility for data without isInferred field.
+   * Provides backward compatibility for data without isPersistent field and old isInferred field.
    */
   static fromObject(obj: {
     id: string;
     description: string;
-    isInferred?: boolean;
+    isPersistent?: boolean;
+    isInferred?: boolean; // Backward compatibility
   }): Topic {
-    return new Topic(obj.id, obj.description, obj.isInferred ?? false);
+    // Handle backward compatibility: isInferred=true means isPersistent=false
+    let isPersistent = obj.isPersistent ?? false;
+    if (obj.isInferred !== undefined && obj.isPersistent === undefined) {
+      isPersistent = !obj.isInferred; // Invert for backward compatibility
+    }
+    return new Topic(obj.id, obj.description, isPersistent);
   }
 
   /**
@@ -38,12 +44,12 @@ export class Topic {
   toObject(): {
     id: string;
     description: string;
-    isInferred: boolean;
+    isPersistent: boolean;
   } {
     return {
       id: this.id,
       description: this.description,
-      isInferred: this.isInferred,
+      isPersistent: this.isPersistent,
     };
   }
 
@@ -51,8 +57,8 @@ export class Topic {
    * Returns a string representation of the topic.
    */
   toString(): string {
-    const inferredFlag = this.isInferred ? " [inferred]" : "";
-    return `Topic(name="${this.name}"${inferredFlag})`;
+    const persistentFlag = this.isPersistent ? " [persistent]" : "";
+    return `Topic(name="${this.name}"${persistentFlag})`;
   }
 
   /**

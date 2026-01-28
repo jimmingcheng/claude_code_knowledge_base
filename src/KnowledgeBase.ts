@@ -256,26 +256,26 @@ export class KnowledgeBase {
   /**
    * Creates a new topic. If a topic with the same name already exists, returns the existing one.
    */
-  createTopic(name: string, description: string, isInferred: boolean = false): Topic {
+  createTopic(name: string, description: string, isPersistent: boolean = false): Topic {
     // Check if topic already exists
     const existingTopic = this.findTopicByName(name);
     if (existingTopic) {
       return existingTopic;
     }
 
-    const topic = new Topic(name, description, isInferred);
+    const topic = new Topic(name, description, isPersistent);
     this.upsertTopic(topic);
     return topic;
   }
 
   /**
    * Creates a new fact with an auto-generated ID.
-   * Topics will be created if they don't exist.
+   * Topics will be created if they don't exist (as non-persistent auto-created topics).
    */
   createFact(content: string, topicNames: Set<string>, sources: Set<Source>): Fact {
-    // Ensure all topics exist, create them if they don't
+    // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
     for (const topicName of topicNames) {
-      this.createTopic(topicName, `Auto-created topic: ${topicName}`, true);
+      this.createTopic(topicName, `Auto-created topic: ${topicName}`, false);
     }
 
     const id = this.getNextFactId();
@@ -368,9 +368,9 @@ export class KnowledgeBase {
   updateFact(id: number, content: string, topicNames: Set<string>, sources: Set<Source>): Fact | null {
     const existingIndex = this.facts.findIndex(f => f.id === id);
     if (existingIndex >= 0) {
-      // Ensure all topics exist, create them if they don't
+      // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
       for (const topicName of topicNames) {
-        this.createTopic(topicName, `Auto-created topic: ${topicName}`, true);
+        this.createTopic(topicName, `Auto-created topic: ${topicName}`, false);
       }
 
       const updatedFact = new Fact(id, content, topicNames, sources);
@@ -388,8 +388,8 @@ export class KnowledgeBase {
     const existingIndex = this.topics.findIndex(t => t.name === name);
     if (existingIndex >= 0) {
       const existingTopic = this.topics[existingIndex];
-      // Preserve the isInferred value from the existing topic
-      const updatedTopic = new Topic(name, newDescription, existingTopic.isInferred);
+      // Preserve the isPersistent value from the existing topic
+      const updatedTopic = new Topic(name, newDescription, existingTopic.isPersistent);
       this.topics[existingIndex] = updatedTopic;
       this.saveTopics();
       return updatedTopic;
@@ -452,8 +452,8 @@ export class KnowledgeBase {
       return false;
     }
 
-    // Create new topic with the new name, same description, and preserve isInferred value
-    const newTopic = new Topic(newName, oldTopic.description, oldTopic.isInferred);
+    // Create new topic with the new name, same description, and preserve isPersistent value
+    const newTopic = new Topic(newName, oldTopic.description, oldTopic.isPersistent);
     this.upsertTopic(newTopic);
 
     // Update all facts that reference the old topic

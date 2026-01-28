@@ -18,7 +18,7 @@ function main() {
     console.log('  facts-by-any-topics <topic1,topic2,...> - Get facts matching ANY of the specified topics (OR logic)');
     console.log('  facts-by-all-topics <topic1,topic2,...> - Get facts matching ALL of the specified topics (AND logic)');
     console.log('  add-fact <content> [topic1,topic2,...] [source1,source2,...]');
-    console.log('  add-topic <name> <description> [isInferred]');
+    console.log('  add-topic <name> <description> [isPersistent]');
     console.log('');
     console.log('CRUD Operations:');
     console.log('  update-fact <id> <content> [topic1,topic2,...] [source1,source2,...]');
@@ -171,21 +171,21 @@ function main() {
     case 'add-topic': {
       const name = args[1];
       const description = args[2] || '';
-      const isInferredArg = args[3];
+      const isPersistentArg = args[3];
 
       if (!name) {
         console.error('Please provide topic name');
         return;
       }
 
-      // Parse isInferred parameter (defaults to false for user-created topics)
-      let isInferred = false;
-      if (isInferredArg !== undefined) {
-        isInferred = isInferredArg.toLowerCase() === 'true';
+      // Parse isPersistent parameter (defaults to false for auto-created topics)
+      let isPersistent = false;
+      if (isPersistentArg !== undefined) {
+        isPersistent = isPersistentArg.toLowerCase() === 'true';
       }
 
-      const topic = kb.createTopic(name, description, isInferred);
-      console.log(`Created topic: ${topic.name}${topic.isInferred ? ' [inferred]' : ''}`);
+      const topic = kb.createTopic(name, description, isPersistent);
+      console.log(`Created topic: ${topic.name}${topic.isPersistent ? ' [persistent]' : ''}`);
       console.log(JSON.stringify(topic.toObject(), null, 2));
       break;
     }
@@ -264,6 +264,15 @@ function main() {
         return;
       }
 
+      // Check if topic is persistent before removing
+      const topic = kb.findTopicByName(name);
+      if (topic && topic.isPersistent) {
+        console.error(`Cannot remove persistent topic "${name}".`);
+        console.error('Persistent topics are user-created and protected from automatic modification.');
+        console.error('If you really want to remove this topic, you must do so explicitly with intention.');
+        return;
+      }
+
       const success = kb.removeTopicByName(name);
       if (success) {
         console.log(`Removed topic: ${name}`);
@@ -283,6 +292,22 @@ function main() {
         return;
       }
 
+      // Check if either topic is persistent before merging
+      const sourceTopic = kb.findTopicByName(sourceTopicName);
+      const targetTopic = kb.findTopicByName(targetTopicName);
+
+      if (sourceTopic && sourceTopic.isPersistent) {
+        console.error(`Cannot merge persistent topic "${sourceTopicName}".`);
+        console.error('Persistent topics are user-created and protected from automatic modification.');
+        console.error('Consider merging into the persistent topic instead, or ask the user for explicit permission.');
+        return;
+      }
+
+      if (targetTopic && targetTopic.isPersistent) {
+        console.log(`Merging into persistent topic "${targetTopicName}".`);
+        console.log('Note: The target topic is user-created and will be preserved.');
+      }
+
       const success = kb.mergeTopics(sourceTopicName, targetTopicName);
       if (success) {
         console.log(`Merged topic "${sourceTopicName}" into "${targetTopicName}"`);
@@ -299,6 +324,15 @@ function main() {
 
       if (!oldName || !newName) {
         console.error('Please provide both old and new topic names');
+        return;
+      }
+
+      // Check if topic is persistent before renaming
+      const oldTopic = kb.findTopicByName(oldName);
+      if (oldTopic && oldTopic.isPersistent) {
+        console.error(`Cannot rename persistent topic "${oldName}".`);
+        console.error('Persistent topics are user-created and protected from automatic modification.');
+        console.error('If you want to rename this topic, ask the user for explicit permission first.');
         return;
       }
 
