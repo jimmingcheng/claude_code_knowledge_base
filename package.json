@@ -1,6 +1,6 @@
 {
   "name": "claude-code-knowledge-base",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "TypeScript-based knowledge base system for Claude Code",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
