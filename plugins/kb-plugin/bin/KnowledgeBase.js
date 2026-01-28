@@ -38,6 +38,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const Topic_1 = require("./Topic");
 const Fact_1 = require("./Fact");
+const KnowledgeBaseMetadata_1 = require("./KnowledgeBaseMetadata");
 /**
  * Main knowledge base class that manages topics and facts.
  * Loads data from JSON files and provides methods for querying and updating the knowledge base.
@@ -45,6 +46,7 @@ const Fact_1 = require("./Fact");
 class KnowledgeBase {
     constructor(kbPath) {
         this.kbPath = kbPath;
+        this.metadata = this.loadMetadata(path.join(kbPath, 'kb.json'));
         this.topics = this.loadTopics(path.join(kbPath, 'topics.json'));
         this.facts = this.loadFacts(path.join(kbPath, 'facts.json'));
     }
@@ -52,13 +54,16 @@ class KnowledgeBase {
      * Loads topics from the topics.json file.
      */
     loadTopics(topicsJsonPath) {
+        if (!fs.existsSync(topicsJsonPath)) {
+            return []; // Silent when file doesn't exist - this is expected
+        }
         try {
             const fileContent = fs.readFileSync(topicsJsonPath, 'utf-8');
             const topicsData = JSON.parse(fileContent);
             return topicsData.map(topicObj => Topic_1.Topic.fromObject(topicObj));
         }
         catch (error) {
-            console.warn(`Could not load topics from ${topicsJsonPath}:`, error);
+            console.warn(`Could not parse topics from ${topicsJsonPath}:`, error);
             return [];
         }
     }
@@ -66,24 +71,42 @@ class KnowledgeBase {
      * Loads facts from the facts.json file.
      */
     loadFacts(factsJsonPath) {
+        if (!fs.existsSync(factsJsonPath)) {
+            return []; // Silent when file doesn't exist - this is expected
+        }
         try {
             const fileContent = fs.readFileSync(factsJsonPath, 'utf-8');
             const factsData = JSON.parse(fileContent);
             return factsData.map(factObj => Fact_1.Fact.fromObject(factObj));
         }
         catch (error) {
-            console.warn(`Could not load facts from ${factsJsonPath}:`, error);
+            console.warn(`Could not parse facts from ${factsJsonPath}:`, error);
             return [];
+        }
+    }
+    /**
+     * Loads metadata from the kb.json file.
+     */
+    loadMetadata(metadataJsonPath) {
+        if (!fs.existsSync(metadataJsonPath)) {
+            return null; // Silent when file doesn't exist - this is expected
+        }
+        try {
+            const fileContent = fs.readFileSync(metadataJsonPath, 'utf-8');
+            const metadataData = JSON.parse(fileContent);
+            return KnowledgeBaseMetadata_1.KnowledgeBaseMetadata.fromObject(metadataData);
+        }
+        catch (error) {
+            console.warn(`Could not parse metadata from ${metadataJsonPath}:`, error);
+            return null;
         }
     }
     /**
      * Saves topics to the topics.json file.
      */
     saveTopics() {
-        // Ensure directory exists
-        if (!fs.existsSync(this.kbPath)) {
-            fs.mkdirSync(this.kbPath, { recursive: true });
-        }
+        // Ensure kb.json exists and data files are created
+        this.ensureDataFilesExist();
         const topicsJsonPath = path.join(this.kbPath, 'topics.json');
         const topicsData = this.topics.map(topic => topic.toObject());
         const jsonContent = JSON.stringify(topicsData, null, 2);
@@ -93,14 +116,30 @@ class KnowledgeBase {
      * Saves facts to the facts.json file.
      */
     saveFacts() {
-        // Ensure directory exists
-        if (!fs.existsSync(this.kbPath)) {
-            fs.mkdirSync(this.kbPath, { recursive: true });
-        }
+        // Ensure kb.json exists and data files are created
+        this.ensureDataFilesExist();
         const factsJsonPath = path.join(this.kbPath, 'facts.json');
         const factsData = this.facts.map(fact => fact.toObject());
         const jsonContent = JSON.stringify(factsData, null, 2);
         fs.writeFileSync(factsJsonPath, jsonContent, 'utf-8');
+    }
+    /**
+     * Saves metadata to the kb.json file.
+     */
+    saveMetadata() {
+        if (!this.metadata) {
+            return; // Don't save if no metadata exists
+        }
+        // Ensure directory exists
+        if (!fs.existsSync(this.kbPath)) {
+            fs.mkdirSync(this.kbPath, { recursive: true });
+        }
+        const metadataJsonPath = path.join(this.kbPath, 'kb.json');
+        const metadataData = this.metadata.toObject();
+        const jsonContent = JSON.stringify(metadataData, null, 2);
+        fs.writeFileSync(metadataJsonPath, jsonContent, 'utf-8');
+        // Create CLAUDE.md protection file if it doesn't exist
+        this.ensureClaudeProtectionFile();
     }
     /**
      * Returns all topics in the knowledge base.
@@ -113,6 +152,26 @@ class KnowledgeBase {
      */
     getAllFacts() {
         return [...this.facts]; // Return a copy to prevent external modification
+    }
+    /**
+     * Returns the knowledge base metadata.
+     */
+    getMetadata() {
+        return this.metadata;
+    }
+    /**
+     * Checks if the knowledge base has metadata (kb.json exists and is loaded).
+     */
+    hasMetadata() {
+        return this.metadata !== null;
+    }
+    /**
+     * Sets the knowledge base metadata and saves it to kb.json.
+     */
+    setMetadata(name, description) {
+        this.metadata = new KnowledgeBaseMetadata_1.KnowledgeBaseMetadata(name, description);
+        this.saveMetadata();
+        return this.metadata;
     }
     /**
      * Returns facts that have any of the specified topics.
@@ -207,24 +266,24 @@ class KnowledgeBase {
     /**
      * Creates a new topic. If a topic with the same name already exists, returns the existing one.
      */
-    createTopic(name, description) {
+    createTopic(name, description, isPersistent = false) {
         // Check if topic already exists
         const existingTopic = this.findTopicByName(name);
         if (existingTopic) {
             return existingTopic;
         }
-        const topic = new Topic_1.Topic(name, description);
+        const topic = new Topic_1.Topic(name, description, isPersistent);
         this.upsertTopic(topic);
         return topic;
     }
     /**
      * Creates a new fact with an auto-generated ID.
-     * Topics will be created if they don't exist.
+     * Topics will be created if they don't exist (as non-persistent auto-created topics).
      */
     createFact(content, topicNames, sources) {
-        // Ensure all topics exist, create them if they don't
+        // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
         for (const topicName of topicNames) {
-            this.createTopic(topicName, `Auto-created topic: ${topicName}`);
+            this.createTopic(topicName, `Auto-created topic: ${topicName}`, false);
         }
         const id = this.getNextFactId();
         const fact = new Fact_1.Fact(id, content, topicNames, sources);
@@ -308,9 +367,9 @@ class KnowledgeBase {
     updateFact(id, content, topicNames, sources) {
         const existingIndex = this.facts.findIndex(f => f.id === id);
         if (existingIndex >= 0) {
-            // Ensure all topics exist, create them if they don't
+            // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
             for (const topicName of topicNames) {
-                this.createTopic(topicName, `Auto-created topic: ${topicName}`);
+                this.createTopic(topicName, `Auto-created topic: ${topicName}`, false);
             }
             const updatedFact = new Fact_1.Fact(id, content, topicNames, sources);
             this.facts[existingIndex] = updatedFact;
@@ -325,7 +384,9 @@ class KnowledgeBase {
     updateTopic(name, newDescription) {
         const existingIndex = this.topics.findIndex(t => t.name === name);
         if (existingIndex >= 0) {
-            const updatedTopic = new Topic_1.Topic(name, newDescription);
+            const existingTopic = this.topics[existingIndex];
+            // Preserve the isPersistent value from the existing topic
+            const updatedTopic = new Topic_1.Topic(name, newDescription, existingTopic.isPersistent);
             this.topics[existingIndex] = updatedTopic;
             this.saveTopics();
             return updatedTopic;
@@ -379,8 +440,8 @@ class KnowledgeBase {
         if (!oldTopic || existingNewTopic) {
             return false;
         }
-        // Create new topic with the new name and same description
-        const newTopic = new Topic_1.Topic(newName, oldTopic.description);
+        // Create new topic with the new name, same description, and preserve isPersistent value
+        const newTopic = new Topic_1.Topic(newName, oldTopic.description, oldTopic.isPersistent);
         this.upsertTopic(newTopic);
         // Update all facts that reference the old topic
         let factsUpdated = 0;
@@ -410,6 +471,22 @@ class KnowledgeBase {
         return true;
     }
     /**
+     * Changes the persistence status of a topic.
+     * Returns true if successful, false if topic doesn't exist.
+     */
+    setTopicPersistence(topicName, isPersistent) {
+        const existingIndex = this.topics.findIndex(t => t.name === topicName);
+        if (existingIndex >= 0) {
+            const existingTopic = this.topics[existingIndex];
+            // Create new topic with updated persistence status, preserving other properties
+            const updatedTopic = new Topic_1.Topic(existingTopic.name, existingTopic.description, isPersistent);
+            this.topics[existingIndex] = updatedTopic;
+            this.saveTopics();
+            return true;
+        }
+        return false;
+    }
+    /**
      * Returns statistics about the knowledge base.
      */
     getStats() {
@@ -424,23 +501,133 @@ class KnowledgeBase {
         };
     }
     /**
-     * Creates the knowledge base directory and empty JSON files if they don't exist.
+     * Creates the knowledge base directory.
+     * Does NOT create topics.json or facts.json - those require kb.json to exist first.
      */
     static initializeKnowledgeBase(kbPath) {
         // Create directory if it doesn't exist
         if (!fs.existsSync(kbPath)) {
             fs.mkdirSync(kbPath, { recursive: true });
         }
+        // No longer automatically creates topics.json or facts.json
+        // They will be created by ensureDataFilesExist() when needed
+    }
+    /**
+     * Creates topics.json and facts.json if they don't exist.
+     * REQUIRES kb.json to exist first.
+     */
+    ensureDataFilesExist() {
+        // Check if kb.json exists before creating data files
+        const kbJsonPath = path.join(this.kbPath, 'kb.json');
+        if (!fs.existsSync(kbJsonPath)) {
+            throw new Error('Knowledge base metadata (kb.json) must be created first. ' +
+                'Use "claude-kb set-metadata <name> <description>" to initialize the knowledge base metadata before adding topics or facts.');
+        }
         // Create empty topics.json if it doesn't exist
-        const topicsPath = path.join(kbPath, 'topics.json');
+        const topicsPath = path.join(this.kbPath, 'topics.json');
         if (!fs.existsSync(topicsPath)) {
             fs.writeFileSync(topicsPath, '[]', 'utf-8');
         }
         // Create empty facts.json if it doesn't exist
-        const factsPath = path.join(kbPath, 'facts.json');
+        const factsPath = path.join(this.kbPath, 'facts.json');
         if (!fs.existsSync(factsPath)) {
             fs.writeFileSync(factsPath, '[]', 'utf-8');
         }
+        // Create CLAUDE.md protection file
+        this.ensureClaudeProtectionFile();
+    }
+    /**
+     * Creates CLAUDE.md protection file to prevent direct JSON modification by other agents.
+     */
+    ensureClaudeProtectionFile() {
+        const claudePath = path.join(this.kbPath, 'CLAUDE.md');
+        // Only create if it doesn't exist (don't overwrite existing customizations)
+        if (!fs.existsSync(claudePath)) {
+            try {
+                // Try to read the template from the src/templates directory
+                const templatePath = path.join(__dirname, 'templates', 'CLAUDE.md');
+                let claudeContent;
+                if (fs.existsSync(templatePath)) {
+                    claudeContent = fs.readFileSync(templatePath, 'utf-8');
+                }
+                else {
+                    // Fallback: embedded template if template file not found
+                    claudeContent = this.getEmbeddedClaudeTemplate();
+                }
+                fs.writeFileSync(claudePath, claudeContent, 'utf-8');
+            }
+            catch (error) {
+                // If template creation fails, create a minimal protection file
+                const minimalContent = `# Knowledge Base Directory - Secure Access Required
+
+⚠️ **DO NOT MODIFY FILES DIRECTLY**
+
+This directory contains a structured knowledge base. Direct modification of JSON files can cause data corruption.
+
+**For queries**: Use \`kb-query\` skill
+**For modifications**: Use \`claude-code task kb-agent "<request>"\`
+
+Direct file editing bypasses input validation and semantic understanding.`;
+                fs.writeFileSync(claudePath, minimalContent, 'utf-8');
+            }
+        }
+    }
+    /**
+     * Returns embedded CLAUDE.md template as fallback.
+     */
+    getEmbeddedClaudeTemplate() {
+        return `# Knowledge Base Directory - Secure Access Required
+
+🔒 **IMPORTANT SECURITY NOTICE**: This directory contains a structured knowledge base that requires secure access protocols.
+
+## ⚠️ DO NOT MODIFY FILES DIRECTLY
+
+**Never directly edit these JSON files:**
+- \`kb.json\` - Knowledge base metadata
+- \`topics.json\` - Topic definitions and persistence settings
+- \`facts.json\` - Fact content and topic associations
+
+Direct modification bypasses critical input validation and can cause:
+- Malformed topic names (entire content blocks as topic IDs)
+- Data corruption and inconsistencies
+- Security vulnerabilities
+- Loss of semantic understanding
+
+## ✅ Proper Access Methods
+
+### For Read-Only Queries
+Use the secure \`kb-query\` skill for fast, safe information retrieval:
+
+\`\`\`bash
+# Check knowledge base status and metadata
+kb-query info
+
+# List all available topics
+kb-query list-topics
+
+# Search for facts by topics (OR logic)
+kb-query facts-by-any-topics authentication,security,api
+\`\`\`
+
+### For Content Modifications
+**All mutations must go through kb-agent** for intelligent validation:
+
+\`\`\`bash
+# Add new knowledge with semantic topic extraction
+claude-code task kb-agent "remember that we use TypeScript for type safety"
+
+# Create organized topic structures
+claude-code task kb-agent "create a topic for authentication decisions"
+
+# Organize and clean up knowledge base
+claude-code task kb-agent "organize topics better and fix any inconsistencies"
+\`\`\`
+
+## 🛡️ Security Architecture
+
+This knowledge base uses a **hybrid tool-based security model** with input validation and semantic understanding.
+
+**This directory is protected by intelligent agents. Respect the security model.**`;
     }
 }
 exports.KnowledgeBase = KnowledgeBase;

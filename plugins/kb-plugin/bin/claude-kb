@@ -1,28 +1,19 @@
 #!/usr/bin/env node
 
 // Claude KB Plugin Wrapper
-// This wrapper calls the main CLI from the built distribution
+// This wrapper calls the main CLI from the plugin bin directory
 
 const path = require('path');
 const { spawn } = require('child_process');
-
-// Find the main CLI relative to this plugin location
-const pluginDir = __dirname;  // /path/to/plugins/kb-plugin/bin
 const fs = require('fs');
 
-// Try plugin bin directory first (versioned plugin cache structure)
-let cliPath = path.join(pluginDir, 'cli.js');
+// Find the main CLI in the same directory
+const pluginDir = __dirname;  // /path/to/plugins/kb-plugin/bin
+const cliPath = path.join(pluginDir, 'cli.js');
 
-// Try plugin dist directory (if plugin has its own dist)
 if (!fs.existsSync(cliPath)) {
-  const pluginRoot = path.resolve(pluginDir, '..');
-  cliPath = path.join(pluginRoot, 'dist', 'cli.js');
-}
-
-// Fallback to repo root structure (development/repository structure)
-if (!fs.existsSync(cliPath)) {
-  const repoRoot = path.resolve(pluginDir, '../../..');  // Go up 3 levels to repo root
-  cliPath = path.join(repoRoot, 'dist', 'cli.js');
+  console.error('Error: cli.js not found in plugin bin directory:', cliPath);
+  process.exit(1);
 }
 
 // Forward all arguments to the main CLI

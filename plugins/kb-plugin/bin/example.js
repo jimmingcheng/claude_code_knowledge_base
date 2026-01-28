@@ -10,6 +10,10 @@ function main() {
     // Create or load a knowledge base (this will create a temporary demo directory)
     const kbPath = './demo_kb';
     const kb = (0, index_1.createKnowledgeBase)(kbPath);
+    // IMPORTANT: Set metadata first before creating any topics or facts
+    console.log('\nSetting knowledge base metadata...');
+    kb.setMetadata('Demo Knowledge Base', 'Example TypeScript knowledge base for demonstration purposes');
+    console.log('✓ Metadata initialized');
     // Create some example topics (using topic names as IDs)
     const programmingTopic = kb.createTopic('Programming', 'Programming concepts and techniques');
     const typeScriptTopic = kb.createTopic('TypeScript', 'TypeScript language features');

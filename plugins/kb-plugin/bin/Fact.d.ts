@@ -1,0 +1,79 @@
+import { Topic } from './Topic';
+/**
+ * Type alias for source representation - can be expanded later if needed.
+ */
+export type Source = string;
+/**
+ * Represents a fact in the knowledge base system.
+ * Facts contain content, are categorized by topics, and have sources.
+ */
+export declare class Fact {
+    readonly id: number;
+    readonly content: string;
+    readonly topics: Set<string>;
+    readonly sources: Set<Source>;
+    constructor(id: number, content: string, topics: Set<string>, sources: Set<Source>);
+    /**
+     * Creates a Fact instance from a plain object (e.g., from JSON data).
+     */
+    static fromObject(obj: {
+        id: number;
+        content: string;
+        topics: string[];
+        sources: Source[];
+    }): Fact;
+    /**
+     * Converts the Fact instance to a plain object for serialization.
+     */
+    toObject(): {
+        id: number;
+        content: string;
+        topics: string[];
+        sources: Source[];
+    };
+    /**
+     * Checks if this fact has a specific topic (by Topic object).
+     */
+    hasTopic(topic: Topic): boolean;
+    /**
+     * Checks if this fact has a specific topic (by topic name).
+     */
+    hasTopicName(topicName: string): boolean;
+    /**
+     * Checks if this fact has any of the given topics (by Topic objects).
+     */
+    hasAnyTopic(topics: Topic[]): boolean;
+    /**
+     * Checks if this fact has any of the given topic names.
+     */
+    hasAnyTopicName(topicNames: string[]): boolean;
+    /**
+     * Checks if this fact has all of the given topics (by Topic objects).
+     */
+    hasAllTopics(topics: Topic[]): boolean;
+    /**
+     * Checks if this fact has all of the given topic names.
+     */
+    hasAllTopicNames(topicNames: string[]): boolean;
+    /**
+     * Returns all topic names as an array.
+     */
+    getTopicNames(): string[];
+    /**
+     * Checks if this fact has a specific source.
+     */
+    hasSource(source: Source): boolean;
+    /**
+     * Returns a string representation of the fact.
+     */
+    toString(): string;
+    /**
+     * Checks if this fact is equal to another fact (by ID).
+     */
+    equals(other: Fact): boolean;
+    /**
+     * Returns a hash code for this fact (useful for Set operations).
+     */
+    hashCode(): string;
+}
+//# sourceMappingURL=Fact.d.ts.map
