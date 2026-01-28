@@ -9,7 +9,7 @@
       "name": "kb-plugin",
       "source": "./plugins/kb-plugin",
       "description": "A general purpose knowledge base managed by a specialized intelligent agent.",
-      "version": "1.0.0"
+      "version": "3.2.0"
     }
   ]
 }
