@@ -15,9 +15,10 @@ Execute knowledge base commands securely through the Claude KB CLI.
 # Dynamic KB CLI resolution with fallback paths
 
 # Claude Code plugin cache (user-level installations) - CHECK FIRST
-if [[ -d "$HOME/.claude/plugins/cache/claude-code-knowledge-base/kb-plugin" ]]; then
+CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
+if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
     # Find the latest version by sorting version directories
-    LATEST_VERSION=$(find "$HOME/.claude/plugins/cache/claude-code-knowledge-base/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
+    LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
     if [[ -n "$LATEST_VERSION" ]]; then
         # Prefer claude-kb binary, fallback to cli.js
         if [[ -x "$LATEST_VERSION/bin/claude-kb" ]]; then
@@ -28,13 +29,26 @@ if [[ -d "$HOME/.claude/plugins/cache/claude-code-knowledge-base/kb-plugin" ]]; 
     fi
 fi
 
+# Alternative: Try specific known versions if auto-detection fails
+if [[ -z "$KB_CLI" ]]; then
+    for VERSION in "4.0.4" "4.0.3" "4.0.2" "4.0.1" "4.0.0" "3.2.0" "3.1.0"; do
+        if [[ -x "$CACHE_BASE/kb-plugin/$VERSION/bin/claude-kb" ]]; then
+            KB_CLI="$CACHE_BASE/kb-plugin/$VERSION/bin/claude-kb"
+            break
+        elif [[ -x "$CACHE_BASE/kb-plugin/$VERSION/bin/cli.js" ]]; then
+            KB_CLI="node $CACHE_BASE/kb-plugin/$VERSION/bin/cli.js"
+            break
+        fi
+    done
+fi
+
 # Fallback to marketplace installation
 if [[ -z "$KB_CLI" && -x "$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb" ]]; then
     KB_CLI="$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb"
 fi
 
-# Local development/project paths
-if [[ -z "$KB_CLI" ]]; then
+# Local development/project paths (SKIP if we're in plugin cache context)
+if [[ -z "$KB_CLI" && "$PWD" != *"/.claude/plugins/cache/"* ]]; then
     if [[ -x "./dist/cli.js" ]]; then
         # Development repo structure
         KB_CLI="node ./dist/cli.js"
@@ -64,8 +78,14 @@ fi
 # Final error if nothing found
 if [[ -z "$KB_CLI" ]]; then
     echo "Error: claude-kb CLI not found. Please ensure kb-plugin is properly installed." >&2
+    echo "Debug: Checked paths:" >&2
+    echo "  - $CACHE_BASE/kb-plugin/*/bin/{claude-kb,cli.js}" >&2
+    echo "  - Current directory: $PWD" >&2
     exit 1
 fi
+
+# Debug: Show which CLI we're using
+echo "Debug: Using KB CLI at: $KB_CLI" >&2
 
 $KB_CLI $ARGUMENTS
 `
