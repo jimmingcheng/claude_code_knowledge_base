@@ -11,7 +11,30 @@ Execute knowledge base commands securely through the Claude KB CLI.
 
 ## Command Execution
 
-!`node ../../../../dist/cli.js $ARGUMENTS`
+!`
+# Dynamic KB CLI resolution with fallback paths
+if [[ -x "./dist/cli.js" ]]; then
+    KB_CLI="node ./dist/cli.js"
+elif [[ -x "./plugins/kb-plugin/bin/claude-kb" ]]; then
+    KB_CLI="./plugins/kb-plugin/bin/claude-kb"
+elif [[ -x "./bin/claude-kb" ]]; then
+    KB_CLI="./bin/claude-kb"
+elif [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
+    KB_CLI="node_modules/@claude-code/kb-plugin/bin/claude-kb"
+else
+    # Search for claude-kb binary
+    KB_CLI=$(find . -name "claude-kb" -type f -executable 2>/dev/null | head -1)
+    if [[ -z "$KB_CLI" ]]; then
+        KB_CLI=$(which claude-kb 2>/dev/null)
+    fi
+    if [[ -z "$KB_CLI" ]]; then
+        echo "Error: claude-kb CLI not found. Please ensure kb-plugin is properly installed." >&2
+        exit 1
+    fi
+fi
+
+$KB_CLI $ARGUMENTS
+`
 
 ## Available Commands
 
