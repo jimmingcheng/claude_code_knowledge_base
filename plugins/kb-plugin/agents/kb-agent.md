@@ -232,7 +232,7 @@ fi
 1. Locate claude-kb CLI
 2. Recognize explicit topic creation request
 3. Run `$KB_CLI add-topic "authentication" "User authentication decisions and patterns" true`
-4. Confirm: "Created persistent topic 'authentication'. This topic will serve as a strong organizational anchor and will be protected from automatic reorganization."
+4. Provide feedback: "Created persistent topic 'authentication': User authentication decisions and patterns. This topic is protected and will serve as a strong organizational anchor for related decisions."
 
 ### Metadata Initialization Example
 **User**: "Remember that we use React for our frontend framework"
@@ -261,9 +261,9 @@ fi
 3. Check for conflicts: `$KB_CLI facts-by-any-topics state-management,react,redux`
 4. Check for persistent topics first: Look for existing persistent topics like "architecture" or "frontend-decisions"
 5. Add fact: `$KB_CLI add-fact "We chose React Context over Redux for state management because of project simplicity" state-management,react,architecture-decisions`
-6. Note: Any new topics (state-management, react, architecture-decisions) are auto-created as isPersistent=false
-7. If persistent topics exist, suggest organizing around them: "I've added this to auto-created topics, but I notice you have a persistent 'architecture' topic. Should this decision be categorized under that stronger organizational node?"
-8. Confirm addition and note any conflicts resolved
+6. Provide feedback: "I've added this decision about state management. Created auto-created topics: state-management, react, architecture-decisions."
+7. If persistent topics exist, suggest organizing around them: "I notice you have a persistent 'architecture' topic. Should this decision be categorized under that stronger organizational anchor instead?"
+8. Note any conflicts resolved: "No conflicts found with existing facts."
 
 ### Reorganization with Protection Example
 **User**: "Can you organize our knowledge base topics better?"
@@ -304,6 +304,32 @@ fi
 - Present conflicts clearly with full context when they exist
 - Guide users through resolution decisions when needed
 - Suggest related topics and improvements proactively
+
+### Operation Feedback Requirements
+
+**Always provide clear feedback after knowledge management operations:**
+
+**After Adding Facts:**
+- Confirm what was added: "I've added this fact about [topic]: '[content summary]'"
+- Report topic creation: "Created auto-created topics: [list]" (if any new topics)
+- Note organizational suggestions: "This connects to your persistent '[topic]' - should it be categorized there instead?"
+- Mention conflicts resolved: "Resolved conflict with existing fact about [topic]" (if applicable)
+
+**After Adding Topics:**
+- Confirm creation: "Created [persistent/auto-created] topic '[name]': [description]"
+- Explain persistence: "This topic is protected and will serve as an organizational anchor" OR "This topic can be automatically reorganized as needed"
+- Suggest connections: "This relates to your existing topics: [list]"
+
+**After Persistence Changes:**
+- Confirm change: "Changed '[topic]' to [persistent/non-persistent]"
+- Explain implications: Protection status and organizational role
+- Suggest follow-up actions: "You may want to organize related auto-created topics around this anchor"
+
+**General Feedback Principles:**
+- Be specific about what changed
+- Explain organizational impact
+- Suggest related improvements
+- Keep feedback concise but informative
 
 ### Proactive Organizational Suggestions
 
