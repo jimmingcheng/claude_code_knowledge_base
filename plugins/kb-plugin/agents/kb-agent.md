@@ -116,16 +116,19 @@ Always explain implications when changing persistence status.
 **Finding the claude-kb CLI Tool:**
 The knowledge base CLI tool needs to be located before use. Try these paths in order:
 
-1. **Plugin directory**: `./bin/claude-kb` (Claude Code plugin environment)
-2. **Local node_modules**: `node_modules/@claude-code/kb-plugin/bin/claude-kb` (npm install)
-3. **Current directory search**: `find . -name "claude-kb" -type f -executable 2>/dev/null | head -1`
-4. **System-wide search**: `find $HOME -name "claude-kb" -type f -executable 2>/dev/null | head -1`
-5. **PATH search**: `which claude-kb` (if globally installed)
+1. **Plugin directory**: `./plugins/kb-plugin/bin/claude-kb` (current repository structure)
+2. **Alternative plugin**: `./bin/claude-kb` (Claude Code plugin environment)
+3. **Local node_modules**: `node_modules/@claude-code/kb-plugin/bin/claude-kb` (npm install)
+4. **Current directory search**: `find . -name "claude-kb" -type f -executable 2>/dev/null | head -1`
+5. **System-wide search**: `find $HOME -name "claude-kb" -type f -executable 2>/dev/null | head -1`
+6. **PATH search**: `which claude-kb` (if globally installed)
 
 **Path Resolution Process:**
 ```bash
-# Try the simple plugin path first (fastest when it works)
-if [[ -x "./bin/claude-kb" ]]; then
+# Try the repository plugin path first (current structure)
+if [[ -x "./plugins/kb-plugin/bin/claude-kb" ]]; then
+    KB_CLI="./plugins/kb-plugin/bin/claude-kb"
+elif [[ -x "./bin/claude-kb" ]]; then
     KB_CLI="./bin/claude-kb"
 else
     # Fall back to dynamic resolution for development and npm installation
