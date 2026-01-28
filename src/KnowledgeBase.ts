@@ -488,6 +488,23 @@ export class KnowledgeBase {
   }
 
   /**
+   * Changes the persistence status of a topic.
+   * Returns true if successful, false if topic doesn't exist.
+   */
+  setTopicPersistence(topicName: string, isPersistent: boolean): boolean {
+    const existingIndex = this.topics.findIndex(t => t.name === topicName);
+    if (existingIndex >= 0) {
+      const existingTopic = this.topics[existingIndex];
+      // Create new topic with updated persistence status, preserving other properties
+      const updatedTopic = new Topic(existingTopic.name, existingTopic.description, isPersistent);
+      this.topics[existingIndex] = updatedTopic;
+      this.saveTopics();
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Returns statistics about the knowledge base.
    */
   getStats(): {

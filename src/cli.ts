@@ -29,6 +29,7 @@ function main() {
     console.log('Topic Management:');
     console.log('  merge-topics <source> <target> - Merge source topic into target');
     console.log('  rename-topic <old> <new>       - Rename a topic');
+    console.log('  set-topic-persistence <name> <true|false> - Change topic persistence status');
     return;
   }
 
@@ -342,6 +343,47 @@ function main() {
         console.log('All facts updated');
       } else {
         console.error(`Could not rename topic. Make sure "${oldName}" exists and "${newName}" doesn't already exist`);
+      }
+      break;
+    }
+
+    case 'set-topic-persistence': {
+      const topicName = args[1];
+      const isPersistentArg = args[2];
+
+      if (!topicName) {
+        console.error('Please provide topic name');
+        return;
+      }
+      if (!isPersistentArg) {
+        console.error('Please provide persistence status (true or false)');
+        return;
+      }
+
+      // Parse isPersistent parameter
+      const isPersistent = isPersistentArg.toLowerCase() === 'true';
+      if (isPersistentArg.toLowerCase() !== 'true' && isPersistentArg.toLowerCase() !== 'false') {
+        console.error('Persistence status must be "true" or "false"');
+        return;
+      }
+
+      const topic = kb.findTopicByName(topicName);
+      if (!topic) {
+        console.error(`Topic "${topicName}" not found`);
+        return;
+      }
+
+      const success = kb.setTopicPersistence(topicName, isPersistent);
+      if (success) {
+        const statusText = isPersistent ? 'persistent' : 'non-persistent';
+        const protectionText = isPersistent
+          ? 'This topic is now protected from automatic modification.'
+          : 'This topic can now be automatically reorganized.';
+
+        console.log(`Changed topic "${topicName}" to ${statusText}`);
+        console.log(protectionText);
+      } else {
+        console.error(`Failed to update topic "${topicName}"`);
       }
       break;
     }

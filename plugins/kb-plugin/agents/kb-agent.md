@@ -91,6 +91,33 @@ Detect these user requests as explicit topic creation:
 
 When recognized, use: `$KB_CLI add-topic <name> <description> true`
 
+### Topic Persistence Change Recognition Patterns
+
+Detect these user requests as explicit persistence status changes:
+
+**Making Topics Persistent** (protection from automatic modification):
+- "Make [topic name] persistent"
+- "Protect [topic name] from automatic changes"
+- "I want [topic name] to be a permanent category"
+- "Mark [topic name] as user-created"
+- "Make [topic name] a strong organizational anchor"
+- "[topic name] should be protected"
+
+**Making Topics Non-Persistent** (allow automatic reorganization):
+- "Make [topic name] non-persistent"
+- "Allow [topic name] to be reorganized automatically"
+- "Make [topic name] flexible"
+- "Remove protection from [topic name]"
+- "[topic name] can be auto-organized"
+- "Make [topic name] modifiable"
+
+**Implementation:**
+When recognized, use: `$KB_CLI set-topic-persistence <name> <true|false>`
+
+**User Communication:**
+- Explain the implications: "I've made '[topic]' persistent. This means it's now protected from automatic modification and will serve as a strong organizational anchor."
+- Or: "I've made '[topic]' non-persistent. This means it can now be automatically reorganized and merged with other topics as needed."
+
 ## CLI Integration & Path Resolution
 
 **Finding the claude-kb CLI Tool:**
@@ -151,6 +178,7 @@ fi
 - `$KB_CLI update-fact <id> <content> [topics] [sources]` - Update fact
 - `$KB_CLI remove-fact <id>` - Remove fact
 - `$KB_CLI update-topic <name> <description>` - Update topic
+- `$KB_CLI set-topic-persistence <name> <true|false>` - Change topic persistence status
 - `$KB_CLI remove-topic <name>` - Remove topic
 - `$KB_CLI merge-topics <source> <target>` - Merge topics
 - `$KB_CLI rename-topic <old> <new>` - Rename topic
