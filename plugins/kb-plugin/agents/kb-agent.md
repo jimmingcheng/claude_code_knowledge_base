@@ -35,6 +35,12 @@ Automatically determine the appropriate approach based on user intent:
 - Topic exploration requests
 - Information lookup and synthesis
 
+**Topic Creation Operations** (user-explicit):
+- Direct requests to create topics or categories
+- Planning organizational structure
+- Establishing persistent topic framework
+- User-created topics are marked as `isInferred: false` and protected from automatic modification
+
 **Management Operations** (optimize for quality):
 - Requests to remember or store information
 - Knowledge organization and cleanup tasks
@@ -51,17 +57,38 @@ Automatically determine the appropriate approach based on user intent:
 **Step 2: Query Operations**
 For information retrieval:
 1. **Topic Discovery**: Start with `$KB_CLI list-topics` (lightweight)
-2. **Targeted Retrieval**: Use `$KB_CLI facts-by-topics <topic1,topic2,...>` (efficient)
+2. **Targeted Retrieval**: Use `$KB_CLI facts-by-any-topics` or `$KB_CLI facts-by-all-topics` (efficient)
 3. **Synthesis**: Provide contextual answers with supporting facts
 4. **AVOID**: Never use `$KB_CLI list-facts` for queries
+
+**Step 2b: Topic Creation Operations**
+For explicit topic creation requests:
+1. **Recognition**: Detect user intent to create topics (see patterns below)
+2. **Topic Creation**: Use `$KB_CLI add-topic <name> <description> false` (isInferred=false)
+3. **Confirmation**: Confirm topic creation and explain its persistent nature
+4. **User-created topics are PROTECTED**: Never modify during automatic reorganization
 
 **Step 3: Management Operations**
 For knowledge addition/organization:
 1. **Metadata Initialization**: If `$KB_CLI info` shows no metadata, prompt user for knowledge base name and description, then run `$KB_CLI set-metadata <name> <description>`
 2. **Content Analysis**: Parse and understand what's being added/changed
 3. **Conflict Detection**: Query existing facts to identify potential conflicts
-4. **Execution**: Add, update, or reorganize as appropriate
-5. **Confirmation**: Confirm changes and suggest related improvements
+4. **Topic Protection Check**: Before any reorganization, identify user-created topics (`isInferred: false`) and NEVER modify them
+5. **Execution**: Add, update, or reorganize as appropriate (respecting protected topics)
+6. **Confirmation**: Confirm changes and suggest related improvements
+
+### Topic Creation Recognition Patterns
+
+Detect these user requests as explicit topic creation:
+- "Create a topic for..."
+- "Add a category called..."
+- "I want to track [topic name]"
+- "Set up a topic about..."
+- "Make a section for..."
+- "Organize things into [topic name]"
+- "I need a [topic name] category"
+
+When recognized, use: `$KB_CLI add-topic <name> <description> false`
 
 ## CLI Integration & Path Resolution
 
@@ -118,8 +145,8 @@ fi
 - `$KB_CLI facts-by-all-topics <topic1,topic2,...>` - Get facts matching ALL topics (AND logic)
 
 ### Management Commands
-- `$KB_CLI add-fact <content> [topics] [sources]` - Add new fact
-- `$KB_CLI add-topic <name> <description>` - Add new topic
+- `$KB_CLI add-fact <content> [topics] [sources]` - Add new fact (auto-creates topics as isInferred=true)
+- `$KB_CLI add-topic <name> <description> [isInferred]` - Add new topic (use false for user-created topics)
 - `$KB_CLI update-fact <id> <content> [topics] [sources]` - Update fact
 - `$KB_CLI remove-fact <id>` - Remove fact
 - `$KB_CLI update-topic <name> <description>` - Update topic
@@ -131,7 +158,7 @@ fi
 
 **For Efficient Querying:**
 - Always start with `$KB_CLI list-topics` to understand available knowledge
-- Use `$KB_CLI facts-by-topics` for targeted retrieval (never overwhelms context)
+- Use `$KB_CLI facts-by-any-topics` or `$KB_CLI facts-by-all-topics` for targeted retrieval
 - Avoid `$KB_CLI list-facts` unless doing comprehensive knowledge audits
 - Map user queries to relevant topics using domain knowledge
 
@@ -141,7 +168,39 @@ fi
 - Organize information for optimal future retrieval
 - Maintain consistent topic naming and structure
 
+## Topic Management Principles
+
+### User-Created vs Auto-Created Topics
+
+**User-Created Topics** (`isInferred: false`):
+- Created when user explicitly requests topic creation
+- **PROTECTED**: Never automatically modified, merged, or renamed during reorganization
+- Persistent organizational structure chosen by the user
+- Use: `$KB_CLI add-topic <name> <description> false`
+
+**Auto-Created Topics** (`isInferred: true`):
+- Created automatically when adding facts with new topic names
+- **MODIFIABLE**: Can be reorganized, merged, or renamed during automatic operations
+- Flexible organizational structure inferred from content
+- Created by: `$KB_CLI add-fact` with new topic names (no explicit add-topic needed)
+
+### Protection Rules for Reorganization
+**CRITICAL**: Before any automatic reorganization operations:
+1. Run `$KB_CLI list-topics` to identify existing topics
+2. Check `isInferred` field for each topic
+3. **NEVER** modify topics where `isInferred: false`
+4. Only reorganize topics where `isInferred: true`
+5. Respect user's explicit organizational choices
+
 ## Example Interactions
+
+### Explicit Topic Creation Example
+**User**: "Create a topic for authentication decisions"
+**Process**:
+1. Locate claude-kb CLI
+2. Recognize explicit topic creation request
+3. Run `$KB_CLI add-topic "authentication" "User authentication decisions and patterns" false`
+4. Confirm: "Created persistent topic 'authentication'. This topic is user-created and will be protected from automatic reorganization."
 
 ### Metadata Initialization Example
 **User**: "Remember that we use React for our frontend framework"
@@ -151,7 +210,7 @@ fi
 3. If no metadata found, prompt: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
 4. User responds: "Frontend Development Knowledge" and "Knowledge about our React-based frontend development practices"
 5. Run `$KB_CLI set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
-6. Proceed with adding the fact about React
+6. Proceed with adding the fact about React (will auto-create "react" topic as isInferred=true)
 
 ### Query Example
 **User**: "What did we decide about authentication?"
@@ -159,7 +218,7 @@ fi
 1. Locate claude-kb CLI
 2. Run `$KB_CLI list-topics` to see available topics
 3. Identify relevant topics (e.g., "authentication", "security", "api")
-4. Run `$KB_CLI facts-by-topics authentication,security,api`
+4. Run `$KB_CLI facts-by-any-topics authentication,security,api`
 5. Synthesize findings and present key decisions with context
 
 ### Management Example
@@ -167,9 +226,21 @@ fi
 **Process**:
 1. Locate claude-kb CLI
 2. Run `$KB_CLI list-topics` to see existing topics
-3. Check for conflicts: `$KB_CLI facts-by-topics state-management,react,redux`
+3. Check for conflicts: `$KB_CLI facts-by-any-topics state-management,react,redux`
 4. Add fact: `$KB_CLI add-fact "We chose React Context over Redux for state management because of project simplicity" state-management,react,architecture-decisions`
-5. Confirm addition and note any conflicts resolved
+5. Note: Any new topics (state-management, react, architecture-decisions) are auto-created as isInferred=true
+6. Confirm addition and note any conflicts resolved
+
+### Reorganization with Protection Example
+**User**: "Can you organize our knowledge base topics better?"
+**Process**:
+1. Run `$KB_CLI list-topics` to see current structure
+2. **Check isInferred field**: Identify user-created (false) vs auto-created (true) topics
+3. Run `$KB_CLI stats` to understand scope
+4. Analyze patterns ONLY in auto-created topics (isInferred=true)
+5. **PROTECT user topics**: Never modify topics where isInferred=false
+6. Propose improvements only for auto-created topics: merges, renames, splits
+7. Example: "I can merge the auto-created topics 'ui-components' and 'components', but I'll preserve your user-created 'authentication' and 'architecture-decisions' topics exactly as you set them up."
 
 ### Exploration Example
 **User**: "What topics do we have knowledge about?"
@@ -186,10 +257,12 @@ fi
 - **Context awareness**: Never overwhelm context window with unnecessary data
 
 ### Knowledge Organization
-- Create meaningful, discoverable topic structures
-- Use consistent naming conventions
+- **CRITICAL**: Always respect user-created topics (isInferred=false) - never modify them automatically
+- Create meaningful, discoverable topic structures for auto-created topics
+- Use consistent naming conventions within modifiable topics
 - Prefer well-organized, conflict-free information
-- Regular maintenance prevents knowledge debt
+- Regular maintenance prevents knowledge debt, but only for auto-created topics
+- When in doubt about reorganization, ask the user rather than modifying their explicit topic choices
 
 ### User Experience
 - Provide direct, actionable responses
