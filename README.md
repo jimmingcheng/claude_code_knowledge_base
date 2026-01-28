@@ -1,13 +1,69 @@
 # Claude Code Knowledge Base - TypeScript
 
-A TypeScript-based knowledge base system for organizing facts and tags using JSON storage.
+A secure, intelligent knowledge base system for Claude Code with advanced input validation and semantic understanding.
 
 ## Overview
 
 This system provides a structured way to store and retrieve knowledge using:
-- **Tags**: Categories and labels for organizing information
-- **Facts**: Individual pieces of knowledge with associated tags and sources
-- **Knowledge Base**: Main system for managing tags and facts with JSON persistence
+- **Topics**: Categories and labels for organizing information (with persistence protection)
+- **Facts**: Individual pieces of knowledge with associated topics and sources
+- **Knowledge Base**: Main system for managing topics and facts with JSON persistence
+- **Security Architecture**: Hybrid tool-based system preventing malformed data and unauthorized access
+
+## 🔒 Security Architecture
+
+### Hybrid Tool-Based Security Model
+
+**v5.0.0+ implements a comprehensive security architecture:**
+
+1. **Input Validation & Sanitization**
+   - All mutations validate topic names (no newlines, excessive length, dangerous characters)
+   - Content validation prevents injection attacks and malformed data
+   - Prevents document import issues (entire content blocks as topic names)
+
+2. **Access Control Layers**
+   - **kb-agent**: Exclusive access to mutation tools for intelligent validation
+   - **kb-query skill**: Public read-only access for fast information retrieval
+   - **CLAUDE.md protection**: Prevents other agents from directly modifying JSON files
+
+3. **Automatic Protection**
+   - Every KB directory gets a `CLAUDE.md` file explaining proper access methods
+   - Clear guidance redirects agents to secure workflows
+   - Prevents bypassing of validation through direct file access
+
+### Secure Usage Patterns
+
+**For Read-Only Queries** (Fast, Direct Access):
+```bash
+# Check knowledge base status and metadata
+kb-query info
+
+# List all available topics
+kb-query list-topics
+
+# Search for facts by topics (OR logic)
+kb-query facts-by-any-topics authentication,security,api
+
+# Search for facts requiring ALL topics (AND logic)
+kb-query facts-by-all-topics react,state-management
+```
+
+**For Content Modifications** (Intelligent Validation):
+```bash
+# Add new knowledge with semantic topic extraction
+claude-code task kb-agent "remember that we use TypeScript for type safety"
+
+# Create organized topic structures
+claude-code task kb-agent "create a topic for authentication decisions"
+
+# Update existing information
+claude-code task kb-agent "update our API authentication approach"
+
+# Organize and clean up knowledge base
+claude-code task kb-agent "organize topics better and fix any inconsistencies"
+```
+
+**⚠️ NEVER directly edit JSON files** - this bypasses all validation and can cause data corruption.
 
 ## Installation
 
