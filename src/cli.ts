@@ -3,6 +3,37 @@ import { createKnowledgeBase } from './index';
 
 const kbPath = process.env.KB_PATH || './kb';
 
+// Helper function to parse and validate comma-separated topic names
+function parseTopicNames(topicsArg: string | undefined): string[] | null {
+  if (!topicsArg) {
+    console.error('Please provide topic names (comma-separated)');
+    return null;
+  }
+  const topicNames = topicsArg.split(',').map(t => t.trim()).filter(t => t.length > 0);
+  if (topicNames.length === 0) {
+    console.error('Please provide at least one valid topic name');
+    return null;
+  }
+  return topicNames;
+}
+
+// Helper function to parse boolean arguments
+function parseBoolean(value: string | undefined, fieldName: string): boolean | null {
+  if (!value) return null;
+  const lower = value.toLowerCase();
+  if (lower === 'true') return true;
+  if (lower === 'false') return false;
+  console.error(`${fieldName} must be "true" or "false"`);
+  return null;
+}
+
+// Helper function for persistent topic protection error
+function showPersistentTopicError(topicName: string, operation: string): void {
+  console.error(`Cannot ${operation} persistent topic "${topicName}".`);
+  console.error('Persistent topics are protected from automatic modification.');
+  console.error('Use "set-topic-persistence" to change protection status first.');
+}
+
 function main() {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -92,16 +123,9 @@ function main() {
     }
 
     case 'facts-by-any-topics': {
-      const topicsArg = args[1];
-      if (!topicsArg) {
-        console.error('Please provide topic names (comma-separated)');
-        return;
-      }
-      const topicNames = topicsArg.split(',').map(t => t.trim()).filter(t => t.length > 0);
-      if (topicNames.length === 0) {
-        console.error('Please provide at least one valid topic name');
-        return;
-      }
+      const topicNames = parseTopicNames(args[1]);
+      if (!topicNames) return;
+
       const facts = kb.getFactsByTopicNames(topicNames);
       if (facts.length === 0) {
         console.log(`No facts found for topics (OR): ${topicNames.join(', ')}`);
@@ -112,41 +136,12 @@ function main() {
     }
 
     case 'facts-by-all-topics': {
-      const topicsArg = args[1];
-      if (!topicsArg) {
-        console.error('Please provide topic names (comma-separated)');
-        return;
-      }
-      const topicNames = topicsArg.split(',').map(t => t.trim()).filter(t => t.length > 0);
-      if (topicNames.length === 0) {
-        console.error('Please provide at least one valid topic name');
-        return;
-      }
+      const topicNames = parseTopicNames(args[1]);
+      if (!topicNames) return;
+
       const facts = kb.getFactsByAllTopicNames(topicNames);
       if (facts.length === 0) {
         console.log(`No facts found for topics (AND): ${topicNames.join(', ')}`);
-        return;
-      }
-      console.log(JSON.stringify(facts.map(f => f.toObject()), null, 2));
-      break;
-    }
-
-    // Backward compatibility: redirect old command to new one
-    case 'facts-by-topics': {
-      console.warn('Warning: "facts-by-topics" is deprecated. Use "facts-by-any-topics" for OR logic or "facts-by-all-topics" for AND logic.');
-      const topicsArg = args[1];
-      if (!topicsArg) {
-        console.error('Please provide topic names (comma-separated)');
-        return;
-      }
-      const topicNames = topicsArg.split(',').map(t => t.trim()).filter(t => t.length > 0);
-      if (topicNames.length === 0) {
-        console.error('Please provide at least one valid topic name');
-        return;
-      }
-      const facts = kb.getFactsByTopicNames(topicNames);
-      if (facts.length === 0) {
-        console.log(`No facts found for topics (OR): ${topicNames.join(', ')}`);
         return;
       }
       console.log(JSON.stringify(facts.map(f => f.toObject()), null, 2));
@@ -180,10 +175,7 @@ function main() {
       }
 
       // Parse isPersistent parameter (defaults to false for auto-created topics)
-      let isPersistent = false;
-      if (isPersistentArg !== undefined) {
-        isPersistent = isPersistentArg.toLowerCase() === 'true';
-      }
+      const isPersistent = parseBoolean(args[3], 'isPersistent') ?? false;
 
       const topic = kb.createTopic(name, description, isPersistent);
       console.log(`Created topic: ${topic.name}${topic.isPersistent ? ' [persistent]' : ''}`);
@@ -268,9 +260,7 @@ function main() {
       // Check if topic is persistent before removing
       const topic = kb.findTopicByName(name);
       if (topic && topic.isPersistent) {
-        console.error(`Cannot remove persistent topic "${name}".`);
-        console.error('Persistent topics are user-created and protected from automatic modification.');
-        console.error('If you really want to remove this topic, you must do so explicitly with intention.');
+        showPersistentTopicError(name, 'remove');
         return;
       }
 
@@ -298,9 +288,8 @@ function main() {
       const targetTopic = kb.findTopicByName(targetTopicName);
 
       if (sourceTopic && sourceTopic.isPersistent) {
-        console.error(`Cannot merge persistent topic "${sourceTopicName}".`);
-        console.error('Persistent topics are user-created and protected from automatic modification.');
-        console.error('Consider merging into the persistent topic instead, or ask the user for explicit permission.');
+        showPersistentTopicError(sourceTopicName, 'merge from');
+        console.error('Consider merging into the persistent topic instead.');
         return;
       }
 
@@ -331,9 +320,7 @@ function main() {
       // Check if topic is persistent before renaming
       const oldTopic = kb.findTopicByName(oldName);
       if (oldTopic && oldTopic.isPersistent) {
-        console.error(`Cannot rename persistent topic "${oldName}".`);
-        console.error('Persistent topics are user-created and protected from automatic modification.');
-        console.error('If you want to rename this topic, ask the user for explicit permission first.');
+        showPersistentTopicError(oldName, 'rename');
         return;
       }
 
@@ -349,24 +336,18 @@ function main() {
 
     case 'set-topic-persistence': {
       const topicName = args[1];
-      const isPersistentArg = args[2];
-
       if (!topicName) {
         console.error('Please provide topic name');
         return;
       }
-      if (!isPersistentArg) {
+
+      const isPersistent = parseBoolean(args[2], 'Persistence status');
+      if (isPersistent === null) {
         console.error('Please provide persistence status (true or false)');
         return;
       }
 
-      // Parse isPersistent parameter
-      const isPersistent = isPersistentArg.toLowerCase() === 'true';
-      if (isPersistentArg.toLowerCase() !== 'true' && isPersistentArg.toLowerCase() !== 'false') {
-        console.error('Persistence status must be "true" or "false"');
-        return;
-      }
-
+      // Check if topic exists before attempting update
       const topic = kb.findTopicByName(topicName);
       if (!topic) {
         console.error(`Topic "${topicName}" not found`);

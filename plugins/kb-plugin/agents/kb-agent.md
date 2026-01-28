@@ -93,30 +93,23 @@ When recognized, use: `$KB_CLI add-topic <name> <description> true`
 
 ### Topic Persistence Change Recognition Patterns
 
-Detect these user requests as explicit persistence status changes:
+Detect requests to change topic persistence status:
 
-**Making Topics Persistent** (protection from automatic modification):
-- "Make [topic name] persistent"
-- "Protect [topic name] from automatic changes"
-- "I want [topic name] to be a permanent category"
-- "Mark [topic name] as user-created"
-- "Make [topic name] a strong organizational anchor"
-- "[topic name] should be protected"
+**Making Topics Persistent** (protected from automatic modification):
+- "Make [topic] persistent/permanent/protected"
+- "Protect [topic] from changes"
+- "[topic] should be persistent/permanent"
 
 **Making Topics Non-Persistent** (allow automatic reorganization):
-- "Make [topic name] non-persistent"
-- "Allow [topic name] to be reorganized automatically"
-- "Make [topic name] flexible"
-- "Remove protection from [topic name]"
-- "[topic name] can be auto-organized"
-- "Make [topic name] modifiable"
+- "Make [topic] non-persistent/flexible/modifiable"
+- "Allow [topic] to be reorganized"
+- "Remove protection from [topic]"
 
 **Implementation:**
-When recognized, use: `$KB_CLI set-topic-persistence <name> <true|false>`
+Use: `$KB_CLI set-topic-persistence <name> <true|false>`
 
 **User Communication:**
-- Explain the implications: "I've made '[topic]' persistent. This means it's now protected from automatic modification and will serve as a strong organizational anchor."
-- Or: "I've made '[topic]' non-persistent. This means it can now be automatically reorganized and merged with other topics as needed."
+Always explain implications when changing persistence status.
 
 ## CLI Integration & Path Resolution
 
