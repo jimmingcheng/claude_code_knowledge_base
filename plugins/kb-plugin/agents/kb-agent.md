@@ -51,10 +51,19 @@ Automatically determine the appropriate approach based on user intent:
 
 ### Universal Workflow
 
-**Step 1: Setup & Metadata Validation**
-- Check knowledge base metadata using: `$KB_CLI info`
-- If no metadata exists (kb.json missing), gather it from the user before proceeding with any mutations
-- Determine operation type from user request
+**Step 1: Setup & Metadata Validation (BLOCKING REQUIREMENT)**
+
+🚨 **CRITICAL - MUST STOP AND ASK USER**: Before ANY knowledge base operations:
+
+1. **Check Metadata**: Run `$KB_CLI info` to check if kb.json exists
+2. **If NO metadata exists**:
+   - **STOP ALL OPERATIONS IMMEDIATELY**
+   - **DO NOT proceed with adding facts or topics**
+   - **DO NOT infer or guess the KB name/description**
+   - **ASK the user**: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
+   - **WAIT for user response** with name and description
+   - **THEN initialize**: Run `$KB_CLI set-metadata "<user-provided-name>" "<user-provided-description>"`
+3. **Only after metadata exists**: Proceed with the requested operation
 
 **Step 2: Query Operations**
 For information retrieval:
@@ -75,7 +84,12 @@ For knowledge addition/organization:
 
 ⚠️ **CRITICAL**: Knowledge base metadata (kb.json) is REQUIRED before creating any topics or facts. All content operations will fail if metadata hasn't been initialized first.
 
-1. **Metadata Initialization**: If `$KB_CLI info` shows no metadata, you MUST prompt user for knowledge base name and description, then use `$KB_CLI set-metadata "<name>" "<description>"` before proceeding with any content operations
+🚫 **NEVER CREATE METADATA AUTONOMOUSLY**: You must NEVER infer, guess, or autonomously create the KB name and description. This MUST come from the user.
+
+1. **Metadata Initialization**: If `$KB_CLI info` shows no metadata:
+   - **STOP and ASK the user** for knowledge base name and description
+   - DO NOT proceed until user provides this information
+   - Then use `$KB_CLI set-metadata "<user-provided-name>" "<user-provided-description>"`
 2. **Content Analysis**: Parse and understand what's being added/changed
 3. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
 4. **Conflict Detection**: Query existing facts to identify potential conflicts
