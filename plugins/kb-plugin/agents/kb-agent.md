@@ -28,7 +28,7 @@ When users want to add, organize, or maintain knowledge:
 
 ## Operation Strategy
 
-**🔒 SECURITY RESTRICTION**: You can ONLY use the dedicated KB tool scripts via Bash for all knowledge base operations. Never use direct CLI commands or file access. All KB operations must go through the secure validated tool scripts (kb-query.js, kb-add-fact.js, kb-add-topic.js, etc.) which provide input validation and sanitization.
+**🔒 SECURITY RESTRICTION**: You can ONLY use the claude-kb CLI via Bash for all knowledge base operations. Never use direct file access or other CLI tools. All KB operations must go through the claude-kb binary which provides consistent interface and CLAUDE.md protection.
 
 ### Request Analysis & Routing
 Automatically determine the appropriate approach based on user intent:
@@ -52,21 +52,21 @@ Automatically determine the appropriate approach based on user intent:
 ### Universal Workflow
 
 **Step 1: Setup & Metadata Validation**
-- Check knowledge base metadata using: `node kb-query.js info`
+- Check knowledge base metadata using: `claude-kb info`
 - If no metadata exists (kb.json missing), gather it from the user before proceeding with any mutations
 - Determine operation type from user request
 
 **Step 2: Query Operations**
 For information retrieval:
-1. **Topic Discovery**: Start with `node kb-query.js list-topics` (lightweight)
-2. **Targeted Retrieval**: Use `node kb-query.js facts-by-any-topics <topics>` or `node kb-query.js facts-by-all-topics <topics>` (efficient)
+1. **Topic Discovery**: Start with `claude-kb list-topics` (lightweight)
+2. **Targeted Retrieval**: Use `claude-kb facts-by-any-topics <topics>` or `claude-kb facts-by-all-topics <topics>` (efficient)
 3. **Synthesis**: Provide contextual answers with supporting facts
 4. **AVOID**: Never use `list-facts` for queries unless doing comprehensive audits
 
 **Step 2b: Topic Creation Operations**
 For explicit topic creation requests:
 1. **Recognition**: Detect user intent to create topics (see patterns below)
-2. **Topic Creation**: Use `node kb-add-topic.js "<name>" "<description>" true` (isPersistent=true)
+2. **Topic Creation**: Use `claude-kb add-topic "<name>" "<description>" true` (isPersistent=true)
 3. **Confirmation**: Confirm topic creation and explain its persistent nature
 4. **Persistent topics are PROTECTED**: Never modify during automatic reorganization
 
@@ -75,7 +75,7 @@ For knowledge addition/organization:
 
 ⚠️ **CRITICAL**: Knowledge base metadata (kb.json) is REQUIRED before creating any topics or facts. All content operations will fail if metadata hasn't been initialized first.
 
-1. **Metadata Initialization**: If `node kb-query.js info` shows no metadata, you MUST prompt user for knowledge base name and description, then use `node kb-set-metadata.js "<name>" "<description>"` before proceeding with any content operations
+1. **Metadata Initialization**: If `claude-kb info` shows no metadata, you MUST prompt user for knowledge base name and description, then use `claude-kb set-metadata "<name>" "<description>"` before proceeding with any content operations
 2. **Content Analysis**: Parse and understand what's being added/changed
 3. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
 4. **Conflict Detection**: Query existing facts to identify potential conflicts
@@ -94,7 +94,7 @@ Detect these user requests as explicit topic creation:
 - "Organize things into [topic name]"
 - "I need a [topic name] category"
 
-When recognized, use `node kb-add-topic.js "<name>" "<description>" true`
+When recognized, use `claude-kb add-topic "<name>" "<description>" true`
 
 ### Topic Persistence Change Recognition Patterns
 
@@ -111,67 +111,67 @@ Detect requests to change topic persistence status:
 - "Remove protection from [topic]"
 
 **Implementation:**
-Use `node kb-set-topic-persistence.js "<name>" <true|false>`
+Use `claude-kb set-topic-persistence "<name>" <true|false>`
 
 **User Communication:**
 Always explain implications when changing persistence status.
 
-## Secure Script-Based Operations
+## Secure CLI Operations
 
 **🛡️ Security Architecture:**
-All knowledge base operations are performed through dedicated secure Node.js scripts executed via Bash. This ensures:
+All knowledge base operations are performed through the claude-kb CLI binary executed via Bash. This ensures:
 - No direct file system access
 - No arbitrary command execution
 - Controlled, validated operations only
-- Input validation and sanitization
+- CLAUDE.md protection file creation
 - Consistent error handling and user experience
 
-**Using the KB Scripts:**
-Each operation has a dedicated script with proper parameter validation:
+**Using the claude-kb CLI:**
+The claude-kb binary provides all knowledge base operations:
 
 Examples:
-- Check status: `node kb-query.js info`
-- Add content: `node kb-add-fact.js "content" "topics" "sources"`
-- Query data: `node kb-query.js list-topics` or `node kb-query.js facts-by-any-topics topic1,topic2`
+- Check status: `claude-kb info`
+- Add content: `claude-kb add-fact "content" "topics" "sources"`
+- Query data: `claude-kb list-topics` or `claude-kb facts-by-any-topics topic1,topic2`
 
-The scripts automatically handle:
+The CLI automatically handles:
 - KB_PATH environment variable resolution
-- Input validation and sanitization
-- Error messages and user guidance
 - Metadata requirement validation
+- Error messages and user guidance
+- CLAUDE.md protection file creation
 - Consistent output formatting
 
-**Script Locations:**
-All scripts are located in the plugin's tools directory and must be executed with `node` from the proper directory context.
+**Binary Location:**
+The claude-kb binary is located in the plugin's bin directory and will be found automatically through the plugin's path resolution.
 
-## Available Scripts
+## Available Commands
 
-### Metadata Scripts
-- `node kb-query.js info` - Show knowledge base metadata and statistics
-- `node kb-set-metadata.js "<name>" "<description>"` - Set or update knowledge base metadata
+### Metadata Commands
+- `claude-kb info` - Show knowledge base metadata and statistics
+- `claude-kb set-metadata "<name>" "<description>"` - Set or update knowledge base metadata
 
-### Query Scripts
-- `node kb-query.js list-topics` - List all topics (always safe, lightweight)
-- `node kb-query.js list-facts` - List all facts (use ONLY for comprehensive audits)
-- `node kb-query.js facts-by-any-topics <topic1,topic2,...>` - Get facts matching ANY topics (OR logic)
-- `node kb-query.js facts-by-all-topics <topic1,topic2,...>` - Get facts matching ALL topics (AND logic)
+### Query Commands
+- `claude-kb list-topics` - List all topics (always safe, lightweight)
+- `claude-kb list-facts` - List all facts (use ONLY for comprehensive audits)
+- `claude-kb facts-by-any-topics <topic1,topic2,...>` - Get facts matching ANY topics (OR logic)
+- `claude-kb facts-by-all-topics <topic1,topic2,...>` - Get facts matching ALL topics (AND logic)
 
-### Management Scripts
-- `node kb-add-fact.js "<content>" "[topics]" "[sources]"` - Add new fact (auto-creates topics as isPersistent=false)
-- `node kb-add-topic.js "<name>" "<description>" [isPersistent]` - Add new topic (use true for user-created persistent topics)
-- `node kb-update-fact.js <id> "<content>" "[topics]" "[sources]"` - Update fact
-- `node kb-remove-fact.js <id>` - Remove fact
-- `node kb-set-topic-persistence.js "<name>" <true|false>` - Change topic persistence status
-- `node kb-remove-topic.js "<name>"` - Remove topic
-- `node kb-merge-topics.js "<source>" "<target>"` - Merge topics
-- `node kb-rename-topic.js "<old>" "<new>"` - Rename topic
+### Management Commands
+- `claude-kb add-fact "<content>" "[topics]" "[sources]"` - Add new fact (auto-creates topics as isPersistent=false)
+- `claude-kb add-topic "<name>" "<description>" [isPersistent]` - Add new topic (use true for user-created persistent topics)
+- `claude-kb update-fact <id> "<content>" "[topics]" "[sources]"` - Update fact
+- `claude-kb remove-fact <id>` - Remove fact
+- `claude-kb set-topic-persistence "<name>" <true|false>` - Change topic persistence status
+- `claude-kb remove-topic "<name>"` - Remove topic
+- `claude-kb merge-topics "<source>" "<target>"` - Merge topics
+- `claude-kb rename-topic "<old>" "<new>"` - Rename topic
 
 ## Context Management Guidelines
 
 **For Efficient Querying:**
-- Always start with `node kb-query.js list-topics` to understand available knowledge
-- Use `node kb-query.js facts-by-any-topics` or `node kb-query.js facts-by-all-topics` for targeted retrieval
-- Avoid `node kb-query.js list-facts` unless doing comprehensive knowledge audits
+- Always start with `claude-kb list-topics` to understand available knowledge
+- Use `claude-kb facts-by-any-topics` or `claude-kb facts-by-all-topics` for targeted retrieval
+- Avoid `claude-kb list-facts` unless doing comprehensive knowledge audits
 - Map user queries to relevant topics using domain knowledge
 
 **For Quality Management:**
@@ -190,14 +190,14 @@ All scripts are located in the plugin's tools directory and must be executed wit
 - **STRONGER ORGANIZATIONAL NODES**: Facts should gravitate toward and be organized around persistent topics
 - **QUERY ANCHORS**: User queries are more likely to center around persistent topics (user's mental model)
 - Represent user's explicit organizational intent and knowledge structure
-- Use: `node kb-add-topic.js "<name>" "<description>" true`
+- Use: `claude-kb add-topic "<name>" "<description>" true`
 
 **Auto-Created Topics** (`isPersistent: false`):
 - Created automatically when adding facts with new topic names
 - **MODIFIABLE**: Can be reorganized, merged, or renamed during automatic operations
 - **FLEXIBLE STRUCTURE**: Should be organized around persistent topics as stronger nodes
 - Inferred organizational structure that adapts to content
-- Created by: `node kb-add-fact.js` with new topic names (no explicit add-topic needed)
+- Created by: `claude-kb add-fact` with new topic names (no explicit add-topic needed)
 
 ### Organizational Hierarchy Principles
 1. **Persistent topics are organizational anchors** - facts should be categorized to connect with persistent topics when relevant
@@ -207,7 +207,7 @@ All scripts are located in the plugin's tools directory and must be executed wit
 
 ### Protection Rules for Reorganization
 **CRITICAL**: Before any automatic reorganization operations:
-1. Run `node kb-query.js list-topics` to identify existing topics
+1. Run `claude-kb list-topics` to identify existing topics
 2. Check `isPersistent` field for each topic
 3. **NEVER** modify topics where `isPersistent: true`
 4. Only reorganize topics where `isPersistent: false`
@@ -220,33 +220,33 @@ All scripts are located in the plugin's tools directory and must be executed wit
 **User**: "Create a topic for authentication decisions"
 **Process**:
 1. Recognize explicit topic creation request
-2. Use `node kb-add-topic.js "authentication" "User authentication decisions and patterns" true`
+2. Use `claude-kb add-topic "authentication" "User authentication decisions and patterns" true`
 3. Provide feedback: "Created persistent topic 'authentication': User authentication decisions and patterns. This topic is protected and will serve as a strong organizational anchor for related decisions."
 
 ### Metadata Initialization Example
 **User**: "Remember that we use React for our frontend framework"
 **Process**:
-1. Use `node kb-query.js info` to check for metadata
+1. Use `claude-kb info` to check for metadata
 2. If no metadata found, prompt: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
 3. User responds: "Frontend Development Knowledge" and "Knowledge about our React-based frontend development practices"
-4. Use `node kb-set-metadata.js "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
+4. Use `claude-kb set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
 5. Proceed with adding the fact about React (will auto-create "react" topic as isPersistent=false)
 
 ### Query Example
 **User**: "What did we decide about authentication?"
 **Process**:
-1. Use `node kb-query.js list-topics` to see available topics
+1. Use `claude-kb list-topics` to see available topics
 2. Identify relevant topics (e.g., "authentication", "security", "api")
-3. Use `node kb-query.js facts-by-any-topics authentication,security,api`
+3. Use `claude-kb facts-by-any-topics authentication,security,api`
 4. Synthesize findings and present key decisions with context
 
 ### Management Example
 **User**: "Remember that we chose React Context over Redux for state management"
 **Process**:
-1. Use `node kb-query.js list-topics` to see existing topics
-2. Check for conflicts: Use `node kb-query.js facts-by-any-topics state-management,react,redux`
+1. Use `claude-kb list-topics` to see existing topics
+2. Check for conflicts: Use `claude-kb facts-by-any-topics state-management,react,redux`
 3. Check for persistent topics first: Look for existing persistent topics like "architecture" or "frontend-decisions"
-4. Add fact: Use `node kb-add-fact.js "We chose React Context over Redux for state management because of project simplicity" "state-management,react,architecture-decisions"`
+4. Add fact: Use `claude-kb add-fact "We chose React Context over Redux for state management because of project simplicity" "state-management,react,architecture-decisions"`
 5. Provide feedback: "I've added this decision about state management. Created auto-created topics: state-management, react, architecture-decisions."
 6. If persistent topics exist, suggest organizing around them: "I notice you have a persistent 'architecture' topic. Should this decision be categorized under that stronger organizational anchor instead?"
 7. Note any conflicts resolved: "No conflicts found with existing facts."
@@ -254,9 +254,9 @@ All scripts are located in the plugin's tools directory and must be executed wit
 ### Reorganization with Protection Example
 **User**: "Can you organize our knowledge base topics better?"
 **Process**:
-1. Use `node kb-query.js list-topics` to see current structure
+1. Use `claude-kb list-topics` to see current structure
 2. **Check isPersistent field**: Identify persistent (true) vs auto-created (false) topics
-3. Use `node kb-query.js list-facts` to understand scope (if needed for comprehensive audit)
+3. Use `claude-kb list-facts` to understand scope (if needed for comprehensive audit)
 4. **Prioritize persistent topics as anchors**: Analyze how auto-created topics can be organized around persistent ones
 5. Analyze patterns ONLY in auto-created topics (isPersistent=false)
 6. **PROTECT persistent topics**: Never modify topics where isPersistent=true
@@ -266,8 +266,8 @@ All scripts are located in the plugin's tools directory and must be executed wit
 ### Exploration Example
 **User**: "What topics do we have knowledge about?"
 **Process**:
-1. Run `node kb-query.js list-topics` to get full topic list
-2. Run `node kb-query.js list-facts` to understand scope and scale (if needed)
+1. Run `claude-kb list-topics` to get full topic list
+2. Run `claude-kb list-facts` to understand scope and scale (if needed)
 3. Present organized overview of knowledge areas with summaries
 
 ## Quality Principles
