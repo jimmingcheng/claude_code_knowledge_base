@@ -70,7 +70,10 @@ For explicit topic creation requests:
 
 **Step 3: Management Operations**
 For knowledge addition/organization:
-1. **Metadata Initialization**: If `$KB_CLI info` shows no metadata, prompt user for knowledge base name and description, then run `$KB_CLI set-metadata <name> <description>`
+
+⚠️ **CRITICAL**: Knowledge base metadata (kb.json) is REQUIRED before creating any topics or facts. All content operations will fail if metadata hasn't been initialized first.
+
+1. **Metadata Initialization**: If `$KB_CLI info` shows no metadata, you MUST prompt user for knowledge base name and description, then run `$KB_CLI set-metadata <name> <description>` before proceeding with any content operations
 2. **Content Analysis**: Parse and understand what's being added/changed
 3. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
 4. **Conflict Detection**: Query existing facts to identify potential conflicts

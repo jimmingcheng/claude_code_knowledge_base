@@ -40,14 +40,19 @@ function main() {
 
   if (!command) {
     console.log('Usage: claude-kb <command> [args...]');
-    console.log('Commands:');
+    console.log('');
+    console.log('First-time setup (REQUIRED):');
+    console.log('  set-metadata <name> <description> - Initialize knowledge base metadata');
+    console.log('');
+    console.log('Query commands:');
     console.log('  info                  - Show knowledge base metadata and statistics');
-    console.log('  set-metadata <name> <description> - Set or update knowledge base metadata');
     console.log('  stats                 - Show knowledge base statistics');
     console.log('  list-topics           - List all topics');
     console.log('  list-facts            - List all facts');
     console.log('  facts-by-any-topics <topic1,topic2,...> - Get facts matching ANY of the specified topics (OR logic)');
     console.log('  facts-by-all-topics <topic1,topic2,...> - Get facts matching ALL of the specified topics (AND logic)');
+    console.log('');
+    console.log('Content management (requires metadata initialization):');
     console.log('  add-fact <content> [topic1,topic2,...] [source1,source2,...]');
     console.log('  add-topic <name> <description> [isPersistent]');
     console.log('');

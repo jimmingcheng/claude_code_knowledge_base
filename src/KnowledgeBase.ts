@@ -25,12 +25,16 @@ export class KnowledgeBase {
    * Loads topics from the topics.json file.
    */
   private loadTopics(topicsJsonPath: string): Topic[] {
+    if (!fs.existsSync(topicsJsonPath)) {
+      return []; // Silent when file doesn't exist - this is expected
+    }
+
     try {
       const fileContent = fs.readFileSync(topicsJsonPath, 'utf-8');
       const topicsData = JSON.parse(fileContent) as any[];
       return topicsData.map(topicObj => Topic.fromObject(topicObj));
     } catch (error) {
-      console.warn(`Could not load topics from ${topicsJsonPath}:`, error);
+      console.warn(`Could not parse topics from ${topicsJsonPath}:`, error);
       return [];
     }
   }
@@ -39,12 +43,16 @@ export class KnowledgeBase {
    * Loads facts from the facts.json file.
    */
   private loadFacts(factsJsonPath: string): Fact[] {
+    if (!fs.existsSync(factsJsonPath)) {
+      return []; // Silent when file doesn't exist - this is expected
+    }
+
     try {
       const fileContent = fs.readFileSync(factsJsonPath, 'utf-8');
       const factsData = JSON.parse(fileContent) as any[];
       return factsData.map(factObj => Fact.fromObject(factObj));
     } catch (error) {
-      console.warn(`Could not load facts from ${factsJsonPath}:`, error);
+      console.warn(`Could not parse facts from ${factsJsonPath}:`, error);
       return [];
     }
   }
@@ -53,12 +61,16 @@ export class KnowledgeBase {
    * Loads metadata from the kb.json file.
    */
   private loadMetadata(metadataJsonPath: string): KnowledgeBaseMetadata | null {
+    if (!fs.existsSync(metadataJsonPath)) {
+      return null; // Silent when file doesn't exist - this is expected
+    }
+
     try {
       const fileContent = fs.readFileSync(metadataJsonPath, 'utf-8');
       const metadataData = JSON.parse(fileContent);
       return KnowledgeBaseMetadata.fromObject(metadataData);
     } catch (error) {
-      console.warn(`Could not load metadata from ${metadataJsonPath}:`, error);
+      console.warn(`Could not parse metadata from ${metadataJsonPath}:`, error);
       return null;
     }
   }
@@ -67,10 +79,8 @@ export class KnowledgeBase {
    * Saves topics to the topics.json file.
    */
   private saveTopics(): void {
-    // Ensure directory exists
-    if (!fs.existsSync(this.kbPath)) {
-      fs.mkdirSync(this.kbPath, { recursive: true });
-    }
+    // Ensure kb.json exists and data files are created
+    this.ensureDataFilesExist();
 
     const topicsJsonPath = path.join(this.kbPath, 'topics.json');
     const topicsData = this.topics.map(topic => topic.toObject());
@@ -82,10 +92,8 @@ export class KnowledgeBase {
    * Saves facts to the facts.json file.
    */
   private saveFacts(): void {
-    // Ensure directory exists
-    if (!fs.existsSync(this.kbPath)) {
-      fs.mkdirSync(this.kbPath, { recursive: true });
-    }
+    // Ensure kb.json exists and data files are created
+    this.ensureDataFilesExist();
 
     const factsJsonPath = path.join(this.kbPath, 'facts.json');
     const factsData = this.facts.map(fact => fact.toObject());
@@ -525,22 +533,40 @@ export class KnowledgeBase {
   }
 
   /**
-   * Creates the knowledge base directory and empty JSON files if they don't exist.
+   * Creates the knowledge base directory.
+   * Does NOT create topics.json or facts.json - those require kb.json to exist first.
    */
   static initializeKnowledgeBase(kbPath: string): void {
     // Create directory if it doesn't exist
     if (!fs.existsSync(kbPath)) {
       fs.mkdirSync(kbPath, { recursive: true });
     }
+    // No longer automatically creates topics.json or facts.json
+    // They will be created by ensureDataFilesExist() when needed
+  }
+
+  /**
+   * Creates topics.json and facts.json if they don't exist.
+   * REQUIRES kb.json to exist first.
+   */
+  private ensureDataFilesExist(): void {
+    // Check if kb.json exists before creating data files
+    const kbJsonPath = path.join(this.kbPath, 'kb.json');
+    if (!fs.existsSync(kbJsonPath)) {
+      throw new Error(
+        'Knowledge base metadata (kb.json) must be created first. ' +
+        'Use "claude-kb set-metadata <name> <description>" to initialize the knowledge base metadata before adding topics or facts.'
+      );
+    }
 
     // Create empty topics.json if it doesn't exist
-    const topicsPath = path.join(kbPath, 'topics.json');
+    const topicsPath = path.join(this.kbPath, 'topics.json');
     if (!fs.existsSync(topicsPath)) {
       fs.writeFileSync(topicsPath, '[]', 'utf-8');
     }
 
     // Create empty facts.json if it doesn't exist
-    const factsPath = path.join(kbPath, 'facts.json');
+    const factsPath = path.join(this.kbPath, 'facts.json');
     if (!fs.existsSync(factsPath)) {
       fs.writeFileSync(factsPath, '[]', 'utf-8');
     }
