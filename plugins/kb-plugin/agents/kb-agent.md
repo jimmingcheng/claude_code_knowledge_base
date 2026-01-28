@@ -63,7 +63,13 @@ Automatically determine the appropriate approach based on user intent:
    - **ASK the user**: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
    - **WAIT for user response** with name and description
    - **THEN initialize**: Run `$KB_CLI set-metadata "<user-provided-name>" "<user-provided-description>"`
-3. **Only after metadata exists**: Proceed with the requested operation
+3. **If metadata exists - READ AND UNDERSTAND IT**:
+   - **Parse the output**: Extract the "Name" and "Description" fields from `$KB_CLI info`
+   - **Understand KB scope**: The description defines what belongs in this KB
+   - **Use as filter**: Only add facts that align with the KB's stated purpose
+   - **Guide organization**: Use the KB's context to make better topic and organizational decisions
+   - **Example**: If KB is "Frontend Development Knowledge", don't add backend/database facts
+4. **Only after understanding the KB context**: Proceed with the requested operation
 
 **Step 2: Query Operations**
 For information retrieval:
@@ -90,12 +96,16 @@ For knowledge addition/organization:
    - **STOP and ASK the user** for knowledge base name and description
    - DO NOT proceed until user provides this information
    - Then use `$KB_CLI set-metadata "<user-provided-name>" "<user-provided-description>"`
-2. **Content Analysis**: Parse and understand what's being added/changed
-3. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
-4. **Conflict Detection**: Query existing facts to identify potential conflicts
-5. **Topic Protection Check**: Before any reorganization, identify persistent topics and NEVER modify them automatically
-6. **Execution**: Add, update, or reorganize as appropriate (respecting persistent topics as stronger organizational nodes)
-7. **Confirmation**: Confirm changes and suggest related improvements
+2. **Scope Validation**: Using the KB metadata from Step 1:
+   - **Verify relevance**: Ensure the content being added aligns with the KB's stated purpose
+   - **If off-topic**: Inform the user that the content doesn't match the KB scope and ask if they want to proceed
+   - **Example**: If KB is "Frontend Development", question adding facts about database schemas
+3. **Content Analysis**: Parse and understand what's being added/changed
+4. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
+5. **Conflict Detection**: Query existing facts to identify potential conflicts
+6. **Topic Protection Check**: Before any reorganization, identify persistent topics and NEVER modify them automatically
+7. **Execution**: Add, update, or reorganize as appropriate (respecting persistent topics as stronger organizational nodes)
+8. **Confirmation**: Confirm changes and suggest related improvements
 
 ### Topic Creation Recognition Patterns
 
@@ -334,13 +344,26 @@ $KB_CLI_OUTPUT list-topics
 ### Management Example
 **User**: "Remember that we chose React Context over Redux for state management"
 **Process**:
-1. Use `$KB_CLI list-topics` to see existing topics
-2. Check for conflicts: Use `$KB_CLI facts-by-any-topics state-management,react,redux`
-3. Check for persistent topics first: Look for existing persistent topics like "architecture" or "frontend-decisions"
-4. Add fact: Use `$KB_CLI add-fact "We chose React Context over Redux for state management because of project simplicity" "state-management,react,architecture-decisions"`
-5. Provide feedback: "I've added this decision about state management. Created auto-created topics: state-management, react, architecture-decisions."
-6. If persistent topics exist, suggest organizing around them: "I notice you have a persistent 'architecture' topic. Should this decision be categorized under that stronger organizational anchor instead?"
-7. Note any conflicts resolved: "No conflicts found with existing facts."
+1. **Read KB context**: Use `$KB_CLI info` to understand the KB's purpose
+   - Output shows: "Name: Frontend Development Knowledge, Description: Knowledge about our React-based frontend development practices"
+   - This confirms React-related facts are in scope
+2. Use `$KB_CLI list-topics` to see existing topics
+3. Check for conflicts: Use `$KB_CLI facts-by-any-topics state-management,react,redux`
+4. Check for persistent topics first: Look for existing persistent topics like "architecture" or "frontend-decisions"
+5. **Validate scope**: Content is about React state management → matches KB description ✓
+6. Add fact: Use `$KB_CLI add-fact "We chose React Context over Redux for state management because of project simplicity" "state-management,react,architecture-decisions"`
+7. Provide feedback: "I've added this decision about state management. Created auto-created topics: state-management, react, architecture-decisions."
+8. If persistent topics exist, suggest organizing around them: "I notice you have a persistent 'architecture' topic. Should this decision be categorized under that stronger organizational anchor instead?"
+9. Note any conflicts resolved: "No conflicts found with existing facts."
+
+### Out-of-Scope Example
+**User**: "Remember that we use PostgreSQL for the database"
+**Context**: KB is "Frontend Development Knowledge" focused on React practices
+**Process**:
+1. **Read KB context**: Use `$KB_CLI info`
+   - Shows: "Description: Knowledge about our React-based frontend development practices"
+2. **Scope check**: PostgreSQL database choice is backend/infrastructure, not frontend
+3. **Alert user**: "I notice this knowledge base is focused on 'React-based frontend development practices'. The information about PostgreSQL seems to be about backend infrastructure, which is outside this KB's scope. Would you like me to add it anyway, or should we create a separate knowledge base for backend/infrastructure decisions?"
 
 ### Reorganization with Protection Example
 **User**: "Can you organize our knowledge base topics better?"
