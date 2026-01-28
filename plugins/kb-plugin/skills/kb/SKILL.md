@@ -47,15 +47,9 @@ if [[ -z "$KB_CLI" && -x "$HOME/.claude/plugins/marketplaces/claude-code-knowled
     KB_CLI="$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb"
 fi
 
-# Local development/project paths (SKIP if we're in plugin cache context)
-if [[ -z "$KB_CLI" && "$PWD" != *"/.claude/plugins/cache/"* ]]; then
-    if [[ -x "./dist/cli.js" ]]; then
-        # Development repo structure
-        KB_CLI="node ./dist/cli.js"
-    elif [[ -x "./plugins/kb-plugin/bin/claude-kb" ]]; then
-        # Repository plugin structure
-        KB_CLI="./plugins/kb-plugin/bin/claude-kb"
-    elif [[ -x "./bin/claude-kb" ]]; then
+# Project-level and package installations
+if [[ -z "$KB_CLI" ]]; then
+    if [[ -x "./bin/claude-kb" ]]; then
         # Claude Code plugin environment
         KB_CLI="./bin/claude-kb"
     elif [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
