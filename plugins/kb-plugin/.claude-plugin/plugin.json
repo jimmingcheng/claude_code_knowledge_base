@@ -11,17 +11,5 @@
   ],
   "skills": [
     "./skills/kb-query/SKILL.md"
-  ],
-  "tools": [
-    "./tools/kb-query.js",
-    "./tools/kb-add-fact.js",
-    "./tools/kb-add-topic.js",
-    "./tools/kb-update-fact.js",
-    "./tools/kb-remove-fact.js",
-    "./tools/kb-remove-topic.js",
-    "./tools/kb-set-topic-persistence.js",
-    "./tools/kb-merge-topics.js",
-    "./tools/kb-rename-topic.js",
-    "./tools/kb-set-metadata.js"
   ]
 }
