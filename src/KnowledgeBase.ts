@@ -118,6 +118,9 @@ export class KnowledgeBase {
     const metadataData = this.metadata.toObject();
     const jsonContent = JSON.stringify(metadataData, null, 2);
     fs.writeFileSync(metadataJsonPath, jsonContent, 'utf-8');
+
+    // Create CLAUDE.md protection file if it doesn't exist
+    this.ensureClaudeProtectionFile();
   }
 
   /**
@@ -570,5 +573,105 @@ export class KnowledgeBase {
     if (!fs.existsSync(factsPath)) {
       fs.writeFileSync(factsPath, '[]', 'utf-8');
     }
+
+    // Create CLAUDE.md protection file
+    this.ensureClaudeProtectionFile();
+  }
+
+  /**
+   * Creates CLAUDE.md protection file to prevent direct JSON modification by other agents.
+   */
+  private ensureClaudeProtectionFile(): void {
+    const claudePath = path.join(this.kbPath, 'CLAUDE.md');
+
+    // Only create if it doesn't exist (don't overwrite existing customizations)
+    if (!fs.existsSync(claudePath)) {
+      try {
+        // Try to read the template from the src/templates directory
+        const templatePath = path.join(__dirname, 'templates', 'CLAUDE.md');
+        let claudeContent: string;
+
+        if (fs.existsSync(templatePath)) {
+          claudeContent = fs.readFileSync(templatePath, 'utf-8');
+        } else {
+          // Fallback: embedded template if template file not found
+          claudeContent = this.getEmbeddedClaudeTemplate();
+        }
+
+        fs.writeFileSync(claudePath, claudeContent, 'utf-8');
+      } catch (error) {
+        // If template creation fails, create a minimal protection file
+        const minimalContent = `# Knowledge Base Directory - Secure Access Required
+
+⚠️ **DO NOT MODIFY FILES DIRECTLY**
+
+This directory contains a structured knowledge base. Direct modification of JSON files can cause data corruption.
+
+**For queries**: Use \`kb-query\` skill
+**For modifications**: Use \`claude-code task kb-agent "<request>"\`
+
+Direct file editing bypasses input validation and semantic understanding.`;
+
+        fs.writeFileSync(claudePath, minimalContent, 'utf-8');
+      }
+    }
+  }
+
+  /**
+   * Returns embedded CLAUDE.md template as fallback.
+   */
+  private getEmbeddedClaudeTemplate(): string {
+    return `# Knowledge Base Directory - Secure Access Required
+
+🔒 **IMPORTANT SECURITY NOTICE**: This directory contains a structured knowledge base that requires secure access protocols.
+
+## ⚠️ DO NOT MODIFY FILES DIRECTLY
+
+**Never directly edit these JSON files:**
+- \`kb.json\` - Knowledge base metadata
+- \`topics.json\` - Topic definitions and persistence settings
+- \`facts.json\` - Fact content and topic associations
+
+Direct modification bypasses critical input validation and can cause:
+- Malformed topic names (entire content blocks as topic IDs)
+- Data corruption and inconsistencies
+- Security vulnerabilities
+- Loss of semantic understanding
+
+## ✅ Proper Access Methods
+
+### For Read-Only Queries
+Use the secure \`kb-query\` skill for fast, safe information retrieval:
+
+\`\`\`bash
+# Check knowledge base status and metadata
+kb-query info
+
+# List all available topics
+kb-query list-topics
+
+# Search for facts by topics (OR logic)
+kb-query facts-by-any-topics authentication,security,api
+\`\`\`
+
+### For Content Modifications
+**All mutations must go through kb-agent** for intelligent validation:
+
+\`\`\`bash
+# Add new knowledge with semantic topic extraction
+claude-code task kb-agent "remember that we use TypeScript for type safety"
+
+# Create organized topic structures
+claude-code task kb-agent "create a topic for authentication decisions"
+
+# Organize and clean up knowledge base
+claude-code task kb-agent "organize topics better and fix any inconsistencies"
+\`\`\`
+
+## 🛡️ Security Architecture
+
+This knowledge base uses a **hybrid tool-based security model** with input validation and semantic understanding.
+
+**This directory is protected by intelligent agents. Respect the security model.**`;
   }
 }
