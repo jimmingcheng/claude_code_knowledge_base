@@ -22,8 +22,7 @@ This system provides a structured way to store and retrieve knowledge using:
    - Prevents document import issues (entire content blocks as topic names)
 
 2. **Access Control Layers**
-   - **kb-agent**: Exclusive access to mutation tools for intelligent validation
-   - **kb-query skill**: Public read-only access for fast information retrieval
+   - **kb-agent**: Handles all knowledge base operations with intelligent validation
    - **CLAUDE.md protection**: Prevents other agents from directly modifying JSON files
 
 3. **Automatic Protection**
@@ -33,22 +32,20 @@ This system provides a structured way to store and retrieve knowledge using:
 
 ### Secure Usage Patterns
 
-**For Read-Only Queries** (Fast, Direct Access):
+All knowledge base operations go through kb-agent:
+
+**Ask questions naturally** - Claude invokes kb-agent automatically:
+- "What's in the knowledge base?"
+- "What do we know about authentication?"
+- "Show me all topics"
+
+**Direct invocation** (when needed):
 ```bash
-# Check knowledge base status and metadata
-kb-query info
-
-# List all available topics
-kb-query list-topics
-
-# Search for facts by topics (OR logic)
-kb-query facts-by-any-topics authentication,security,api
-
-# Search for facts requiring ALL topics (AND logic)
-kb-query facts-by-all-topics react,state-management
+claude-code task kb-agent "show me all facts about React"
+claude-code task kb-agent "what did we decide about authentication?"
 ```
 
-**For Content Modifications** (Intelligent Validation):
+**Add knowledge**:
 ```bash
 # Add new knowledge with semantic topic extraction
 claude-code task kb-agent "remember that we use TypeScript for type safety"

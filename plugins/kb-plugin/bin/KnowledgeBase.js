@@ -564,8 +564,8 @@ class KnowledgeBase {
 
 This directory contains a structured knowledge base. Direct modification of JSON files can cause data corruption.
 
-**For queries**: Use \`kb-query\` skill
-**For modifications**: Use \`claude-code task kb-agent "<request>"\`
+**For operations**: Use \`kb-agent\` (Claude invokes automatically)
+**Direct invocation**: Use \`claude-code task kb-agent "<request>"\`
 
 Direct file editing bypasses input validation and semantic understanding.`;
                 fs.writeFileSync(claudePath, minimalContent, 'utf-8');
@@ -595,18 +595,19 @@ Direct modification bypasses critical input validation and can cause:
 
 ## ✅ Proper Access Methods
 
-### For Read-Only Queries
-Use the secure \`kb-query\` skill for fast, safe information retrieval:
+### For Knowledge Base Operations
 
+All operations go through the intelligent \`kb-agent\`:
+
+**Ask questions naturally** - Claude invokes kb-agent automatically:
+- "What do we know about authentication?"
+- "List all topics"
+- "Show me facts about React"
+
+**Direct invocation**:
 \`\`\`bash
-# Check knowledge base status and metadata
-kb-query info
-
-# List all available topics
-kb-query list-topics
-
-# Search for facts by topics (OR logic)
-kb-query facts-by-any-topics authentication,security,api
+claude-code task kb-agent "what did we decide about authentication?"
+claude-code task kb-agent "remember that we use PostgreSQL"
 \`\`\`
 
 ### For Content Modifications

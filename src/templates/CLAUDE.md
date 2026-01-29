@@ -17,21 +17,19 @@ Direct modification bypasses critical input validation and can cause:
 
 ## ✅ Proper Access Methods
 
-### For Read-Only Queries
-Use the secure `kb-query` skill for fast, safe information retrieval:
+### For Knowledge Base Operations
 
+All operations go through the intelligent `kb-agent`:
+
+**Ask questions naturally** - Claude invokes kb-agent automatically:
+- "What do we know about authentication?"
+- "List all topics"
+- "Show me facts about React"
+
+**Direct invocation**:
 ```bash
-# Check knowledge base status and metadata
-kb-query info
-
-# List all available topics
-kb-query list-topics
-
-# Search for facts by topics (OR logic)
-kb-query facts-by-any-topics authentication,security,api
-
-# Search for facts requiring ALL topics (AND logic)
-kb-query facts-by-all-topics react,state-management
+claude-code task kb-agent "what did we decide about authentication?"
+claude-code task kb-agent "remember that we use PostgreSQL"
 ```
 
 ### For Content Modifications
@@ -58,7 +56,6 @@ This knowledge base uses a **hybrid tool-based security model**:
 1. **Input Validation**: All mutations validate and sanitize inputs to prevent malformed data
 2. **Semantic Understanding**: kb-agent provides intelligent topic extraction and conflict detection
 3. **Access Control**: Only authorized tools can modify content
-4. **Performance**: Direct queries via kb-query without validation overhead
 
 ## 🚫 Why Direct Access is Blocked
 
@@ -87,8 +84,8 @@ If you absolutely need to examine file contents for debugging:
 ## 📞 Getting Help
 
 For knowledge base operations:
-1. **Queries**: Use `kb-query` skill for information retrieval
-2. **Modifications**: Use `claude-code task kb-agent "<request>"` for content changes
+1. **All operations**: Use `kb-agent` (invoked automatically by Claude)
+2. **Direct invocation**: Use `claude-code task kb-agent "<request>"` for explicit control
 3. **Issues**: Report problems through proper channels, never edit files directly
 
 ---
