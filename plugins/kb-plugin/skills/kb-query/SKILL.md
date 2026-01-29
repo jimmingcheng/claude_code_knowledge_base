@@ -15,12 +15,6 @@ Execute read-only knowledge base queries safely. This skill provides secure acce
 # Use CLAUDE_PLUGIN_ROOT for simple, reliable path resolution
 KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
 
-if [[ ! -x "$KB_CLI" ]]; then
-    echo "Error: claude-kb not found at $KB_CLI" >&2
-    echo "Please ensure kb-plugin is properly installed." >&2
-    exit 1
-fi
-
 # Security: Only allow read-only commands
 # Extract first argument from $ARGUMENTS (skills use $ARGUMENTS, not $1)
 COMMAND=$(echo $ARGUMENTS | awk '{print $1}')
