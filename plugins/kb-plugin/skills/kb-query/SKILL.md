@@ -12,90 +12,12 @@ Execute read-only knowledge base queries safely. This skill provides secure acce
 ## Command Execution
 
 !`
-# TEST: Check if CLAUDE_PLUGIN_ROOT is available in skills
-echo "=== PATH RESOLUTION TEST ===" >&2
-echo "CLAUDE_PLUGIN_ROOT = '${CLAUDE_PLUGIN_ROOT}'" >&2
+# Use CLAUDE_PLUGIN_ROOT for simple, reliable path resolution
+KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
 
-# If CLAUDE_PLUGIN_ROOT is set, use the simple solution
-if [[ -n "${CLAUDE_PLUGIN_ROOT}" ]]; then
-    echo "✓ CLAUDE_PLUGIN_ROOT is set, using simple path resolution" >&2
-    KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
-
-    if [[ -x "$KB_CLI" ]]; then
-        echo "✓ Found claude-kb at: $KB_CLI" >&2
-    else
-        echo "✗ ERROR: CLAUDE_PLUGIN_ROOT is set but claude-kb not executable at: $KB_CLI" >&2
-        exit 1
-    fi
-else
-    echo "✗ CLAUDE_PLUGIN_ROOT not set, falling back to complex resolution" >&2
-
-    # Dynamic KB CLI resolution with fallback paths (same as main kb skill)
-
-    # Claude Code plugin cache (user-level installations) - CHECK FIRST
-    CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
-if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
-    # Find the latest version by sorting version directories
-    LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
-    if [[ -n "$LATEST_VERSION" ]]; then
-        # Prefer claude-kb binary, fallback to cli.js
-        if [[ -x "$LATEST_VERSION/bin/claude-kb" ]]; then
-            KB_CLI="$LATEST_VERSION/bin/claude-kb"
-        elif [[ -x "$LATEST_VERSION/bin/cli.js" ]]; then
-            KB_CLI="node $LATEST_VERSION/bin/cli.js"
-        fi
-    fi
-fi
-
-# Alternative: Try specific known versions if auto-detection fails
-if [[ -z "$KB_CLI" ]]; then
-    for VERSION in "4.0.7" "4.0.6" "4.0.5" "4.0.4" "4.0.3" "4.0.2" "4.0.1" "4.0.0" "3.2.0" "3.1.0"; do
-        if [[ -x "$CACHE_BASE/kb-plugin/$VERSION/bin/claude-kb" ]]; then
-            KB_CLI="$CACHE_BASE/kb-plugin/$VERSION/bin/claude-kb"
-            break
-        elif [[ -x "$CACHE_BASE/kb-plugin/$VERSION/bin/cli.js" ]]; then
-            KB_CLI="node $CACHE_BASE/kb-plugin/$VERSION/bin/cli.js"
-            break
-        fi
-    done
-fi
-
-# Fallback to marketplace installation
-if [[ -z "$KB_CLI" && -x "$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb" ]]; then
-    KB_CLI="$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb"
-fi
-
-# Project-level and package installations
-if [[ -z "$KB_CLI" ]]; then
-    if [[ -x "./bin/claude-kb" ]]; then
-        # Claude Code plugin environment
-        KB_CLI="./bin/claude-kb"
-    elif [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
-        # NPM package installation
-        KB_CLI="node_modules/@claude-code/kb-plugin/bin/claude-kb"
-    fi
-fi
-
-# Dynamic search fallbacks
-if [[ -z "$KB_CLI" ]]; then
-    # Dynamic search in current directory
-    KB_CLI=$(find . -name "claude-kb" -type f -executable 2>/dev/null | head -1)
-
-    # System PATH lookup
-    if [[ -z "$KB_CLI" ]]; then
-        KB_CLI=$(which claude-kb 2>/dev/null)
-    fi
-fi
-
-    # End of CLAUDE_PLUGIN_ROOT fallback else block
-fi
-
-# Final error if nothing found
-if [[ -z "$KB_CLI" ]]; then
-    echo "Error: claude-kb CLI not found. Please ensure kb-plugin is properly installed." >&2
-    echo "Debug: Checked paths:" >&2
-    echo "  - $CACHE_BASE/kb-plugin/*/bin/{claude-kb,cli.js}" >&2
-    echo "  - Current directory: $PWD" >&2
+if [[ ! -x "$KB_CLI" ]]; then
+    echo "Error: claude-kb not found at $KB_CLI" >&2
+    echo "Please ensure kb-plugin is properly installed." >&2
     exit 1
 fi
 
