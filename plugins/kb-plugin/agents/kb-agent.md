@@ -156,7 +156,6 @@ Check invocation message for context URLs: "[Context URLs: ...]"
 **Processing**:
 ```bash
 # For each relevant URL
-echo "→ Executing: claude-kb save-link \"<url>\" \"<title>\"" >&2
 $KB_CLI save-link "<url>" "<title>"
 ```
 
@@ -176,7 +175,6 @@ When adding facts, detect and save hyperlinks from user input:
 
 **Save Command**:
 ```bash
-echo "→ Executing: claude-kb save-link \"<url>\" \"<title>\"" >&2
 $KB_CLI save-link "<url>" "<title>"
 ```
 
@@ -522,13 +520,6 @@ The CLI automatically handles:
 - Consistent output formatting
 
 **🔍 Debug Output Requirement:**
-**ALWAYS** echo the command you're about to execute before running it, using this format:
-```bash
-echo "→ Executing: claude-kb <command>" >&2
-$KB_CLI <command>
-```
-This allows users to see exactly what KB operations are happening behind the scenes.
-
 **CRITICAL: Path Resolution Required Before All Operations**
 
 Before executing ANY claude-kb command, you MUST first resolve the KB_CLI path in a SEPARATE bash call at the START of your agent execution. This keeps permission prompts clean and readable.
@@ -543,53 +534,29 @@ Bash environment variables persist within your bash session, so you only need to
 **Step 1: Path Resolution (separate bash call)**
 
 ```bash
-# Resolve KB CLI path - checks multiple installation locations
-KB_CLI=""
-CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
-
-# Check plugin cache (user-level installations)
-if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
-    LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
-    if [[ -n "$LATEST_VERSION" && -x "$LATEST_VERSION/bin/claude-kb" ]]; then
-        KB_CLI="$LATEST_VERSION/bin/claude-kb"
-    fi
-fi
+# Resolve KB CLI using helper script
+KB_CLI=$(~/.claude/plugins/cache/claude-code-knowledge-base/kb-plugin/*/bin/resolve-kb-cli.sh 2>/dev/null | head -1)
 
 # Fallback to marketplace installation
-if [[ -z "$KB_CLI" && -x "$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb" ]]; then
-    KB_CLI="$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb"
+if [[ -z "$KB_CLI" ]]; then
+    KB_CLI=$(~/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/resolve-kb-cli.sh 2>/dev/null)
 fi
 
-# Fallback to PATH
+# Error if resolution failed
 if [[ -z "$KB_CLI" ]]; then
-    KB_CLI=$(which claude-kb 2>/dev/null)
-fi
-
-# Error if not found
-if [[ -z "$KB_CLI" ]]; then
-    echo "Error: claude-kb not found. Checked:" >&2
-    echo "  - $CACHE_BASE/kb-plugin/*/bin/claude-kb" >&2
-    echo "  - ~/.claude/plugins/marketplaces/.../claude-kb" >&2
-    echo "  - System PATH" >&2
+    echo "Error: Could not resolve claude-kb CLI path" >&2
     exit 1
 fi
 
-# Export for subsequent calls
 export KB_CLI
-echo "KB CLI resolved to: $KB_CLI"
 ```
 
 **Step 2: Clean Operations (subsequent bash calls)**
 
 ```bash
 # Each operation is now clean and readable
-echo "→ Executing: claude-kb info" >&2
 $KB_CLI info
-
-echo "→ Executing: claude-kb list-topics" >&2
 $KB_CLI list-topics
-
-echo "→ Executing: claude-kb add-fact \"content\" \"topics\"" >&2
 $KB_CLI add-fact "content" "topics"
 ```
 
@@ -686,10 +653,10 @@ $KB_CLI add-fact "content" "topics"
 **User**: "Remember that we use React for our frontend framework"
 **Process**:
 1. First bash call - Resolve KB CLI path (see path resolution section above)
-2. Show and execute: `echo "→ Executing: claude-kb info" >&2 && $KB_CLI info`
+2. Execute: `$KB_CLI info`
 3. If no metadata found, prompt: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
 4. User responds: "Frontend Development Knowledge" and "Knowledge about our React-based frontend development practices"
-5. Show and execute: `echo "→ Executing: claude-kb set-metadata \"Frontend Development Knowledge\" \"Knowledge about our React-based frontend development practices\"" >&2 && $KB_CLI set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
+5. Execute: `$KB_CLI set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
 6. Proceed with adding the fact about React (will auto-create "react" topic as isPersistent=false)
 
 ### Query Example
@@ -710,12 +677,10 @@ $KB_CLI add-fact "content" "topics"
 3. **Extract title**: "Anthropic's Claude API" (from context)
 4. **Save link first**:
    ```bash
-   echo "→ Executing: claude-kb save-link \"https://docs.anthropic.com/claude/reference\" \"Anthropic Claude API\"" >&2
    $KB_CLI save-link "https://docs.anthropic.com/claude/reference" "Anthropic Claude API"
    ```
 5. **Add fact**:
    ```bash
-   echo "→ Executing: claude-kb add-fact \"Chatbot uses Anthropic Claude API\" \"api,chatbot,anthropic\"" >&2
    $KB_CLI add-fact "Chatbot uses Anthropic Claude API" "api,chatbot,anthropic"
    ```
 6. **Report**: "I've added the fact about the Anthropic Claude API and saved the documentation link to kb/sources.md."
@@ -734,9 +699,7 @@ User wants to add: "Remember we use React and Next.js for frontend framework"
 3. User wants to add facts about React and Next.js (both relevant)
 4. Save both URLs:
    ```bash
-   echo "→ Executing: claude-kb save-link \"https://react.dev\" \"React documentation\"" >&2
    $KB_CLI save-link "https://react.dev" "React documentation"
-   echo "→ Executing: claude-kb save-link \"https://nextjs.org\" \"Next.js framework\"" >&2
    $KB_CLI save-link "https://nextjs.org" "Next.js framework"
    ```
 4. Detect no additional URLs in immediate input
