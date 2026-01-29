@@ -142,6 +142,14 @@ function main() {
             break;
         }
         case 'add-fact': {
+            // Check if metadata exists before allowing fact creation
+            if (!kb.hasMetadata()) {
+                console.error('ERROR: Knowledge base metadata not initialized.');
+                console.error('You must run "claude-kb set-metadata <name> <description>" first.');
+                console.error('');
+                console.error('This command requires user input and cannot be run autonomously.');
+                process.exit(1);
+            }
             const content = args[1];
             const topicNames = args[2] ? args[2].split(',').map(t => t.trim()) : [];
             const sources = args[3] ? args[3].split(',').map(s => s.trim()) : [];
@@ -155,6 +163,14 @@ function main() {
             break;
         }
         case 'add-topic': {
+            // Check if metadata exists before allowing topic creation
+            if (!kb.hasMetadata()) {
+                console.error('ERROR: Knowledge base metadata not initialized.');
+                console.error('You must run "claude-kb set-metadata <name> <description>" first.');
+                console.error('');
+                console.error('This command requires user input and cannot be run autonomously.');
+                process.exit(1);
+            }
             const name = args[1];
             const description = args[2] || '';
             const isPersistentArg = args[3];
@@ -171,6 +187,12 @@ function main() {
         }
         // CRUD Operations
         case 'update-fact': {
+            // Check if metadata exists before allowing fact updates
+            if (!kb.hasMetadata()) {
+                console.error('ERROR: Knowledge base metadata not initialized.');
+                console.error('You must run "claude-kb set-metadata <name> <description>" first.');
+                process.exit(1);
+            }
             const id = parseInt(args[1]);
             const content = args[2];
             const topicNames = args[3] ? args[3].split(',').map(t => t.trim()) : [];
@@ -239,7 +261,7 @@ function main() {
             const topic = kb.findTopicByName(name);
             if (topic && topic.isPersistent) {
                 showPersistentTopicError(name, 'remove');
-                return;
+                process.exit(1);
             }
             const success = kb.removeTopicByName(name);
             if (success) {
@@ -264,7 +286,7 @@ function main() {
             if (sourceTopic && sourceTopic.isPersistent) {
                 showPersistentTopicError(sourceTopicName, 'merge from');
                 console.error('Consider merging into the persistent topic instead.');
-                return;
+                process.exit(1);
             }
             if (targetTopic && targetTopic.isPersistent) {
                 console.log(`Merging into persistent topic "${targetTopicName}".`);
@@ -291,7 +313,7 @@ function main() {
             const oldTopic = kb.findTopicByName(oldName);
             if (oldTopic && oldTopic.isPersistent) {
                 showPersistentTopicError(oldName, 'rename');
-                return;
+                process.exit(1);
             }
             const success = kb.renameTopic(oldName, newName);
             if (success) {
@@ -336,6 +358,7 @@ function main() {
         }
         default:
             console.error(`Unknown command: ${command}`);
+            process.exit(1);
     }
 }
 if (require.main === module) {

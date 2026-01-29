@@ -291,7 +291,7 @@ function main() {
       const topic = kb.findTopicByName(name);
       if (topic && topic.isPersistent) {
         showPersistentTopicError(name, 'remove');
-        return;
+        process.exit(1);
       }
 
       const success = kb.removeTopicByName(name);
@@ -320,7 +320,7 @@ function main() {
       if (sourceTopic && sourceTopic.isPersistent) {
         showPersistentTopicError(sourceTopicName, 'merge from');
         console.error('Consider merging into the persistent topic instead.');
-        return;
+        process.exit(1);
       }
 
       if (targetTopic && targetTopic.isPersistent) {
@@ -351,7 +351,7 @@ function main() {
       const oldTopic = kb.findTopicByName(oldName);
       if (oldTopic && oldTopic.isPersistent) {
         showPersistentTopicError(oldName, 'rename');
-        return;
+        process.exit(1);
       }
 
       const success = kb.renameTopic(oldName, newName);
@@ -401,6 +401,7 @@ function main() {
 
     default:
       console.error(`Unknown command: ${command}`);
+      process.exit(1);
   }
 }
 

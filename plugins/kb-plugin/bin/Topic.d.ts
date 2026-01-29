@@ -3,20 +3,17 @@
  * Topics are used to categorize and organize facts.
  */
 export declare class Topic {
-    readonly id: string;
+    readonly name: string;
     readonly description: string;
     readonly isPersistent: boolean;
     constructor(name: string, description: string, isPersistent?: boolean);
-    /**
-     * Gets the topic name (same as ID).
-     */
-    get name(): string;
     /**
      * Creates a Topic instance from a plain object (e.g., from JSON data).
      * Provides backward compatibility for data without isPersistent field and old isInferred field.
      */
     static fromObject(obj: {
-        id: string;
+        name?: string;
+        id?: string;
         description: string;
         isPersistent?: boolean;
         isInferred?: boolean;
@@ -25,7 +22,7 @@ export declare class Topic {
      * Converts the Topic instance to a plain object for serialization.
      */
     toObject(): {
-        id: string;
+        name: string;
         description: string;
         isPersistent: boolean;
     };
@@ -34,7 +31,7 @@ export declare class Topic {
      */
     toString(): string;
     /**
-     * Checks if this topic is equal to another topic (by name/ID).
+     * Checks if this topic is equal to another topic (by name).
      */
     equals(other: Topic): boolean;
     /**

@@ -286,7 +286,7 @@ export class KnowledgeBase {
   createFact(content: string, topicNames: Set<string>, sources: Set<Source>): Fact {
     // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
     for (const topicName of topicNames) {
-      this.createTopic(topicName, `Auto-created topic: ${topicName}`, false);
+      this.createTopic(topicName, `Information about ${topicName}`, false);
     }
 
     const id = this.getNextFactId();
@@ -381,7 +381,7 @@ export class KnowledgeBase {
     if (existingIndex >= 0) {
       // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
       for (const topicName of topicNames) {
-        this.createTopic(topicName, `Auto-created topic: ${topicName}`, false);
+        this.createTopic(topicName, `Information about ${topicName}`, false);
       }
 
       const updatedFact = new Fact(id, content, topicNames, sources);

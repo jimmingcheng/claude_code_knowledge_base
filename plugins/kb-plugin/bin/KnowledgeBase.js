@@ -283,7 +283,7 @@ class KnowledgeBase {
     createFact(content, topicNames, sources) {
         // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
         for (const topicName of topicNames) {
-            this.createTopic(topicName, `Auto-created topic: ${topicName}`, false);
+            this.createTopic(topicName, `Information about ${topicName}`, false);
         }
         const id = this.getNextFactId();
         const fact = new Fact_1.Fact(id, content, topicNames, sources);
@@ -369,7 +369,7 @@ class KnowledgeBase {
         if (existingIndex >= 0) {
             // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
             for (const topicName of topicNames) {
-                this.createTopic(topicName, `Auto-created topic: ${topicName}`, false);
+                this.createTopic(topicName, `Information about ${topicName}`, false);
             }
             const updatedFact = new Fact_1.Fact(id, content, topicNames, sources);
             this.facts[existingIndex] = updatedFact;

@@ -63,7 +63,6 @@ describe('File Persistence', () => {
 
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBe(1);
-    expect(data[0]).toHaveProperty('id', 'test-topic');
     expect(data[0]).toHaveProperty('name', 'test-topic');
     expect(data[0]).toHaveProperty('description', 'Test topic description');
     expect(data[0]).toHaveProperty('isPersistent', true);
