@@ -22,6 +22,7 @@ FIRST_ARG=$(echo "$ARGUMENTS" | awk '{print $1}')
 case "$FIRST_ARG" in
     "info"|"list-topics"|"list-facts"|"facts-by-any-topics"|"facts-by-all-topics")
         # Direct command invocation - pass through as-is
+        echo "→ Executing: claude-kb $ARGUMENTS" >&2
         $KB_CLI $ARGUMENTS
         ;;
     "add-fact"|"add-topic"|"update-fact"|"remove-fact"|"remove-topic"|"set-metadata"|"set-topic-persistence"|"merge-topics"|"rename-topic")
@@ -33,12 +34,14 @@ case "$FIRST_ARG" in
         ;;
     "")
         # No arguments - show info
+        echo "→ Executing: claude-kb info" >&2
         $KB_CLI info
         ;;
     *)
         # Treat arguments as topic search (default behavior)
         # Convert space-separated topics to comma-separated for facts-by-any-topics
         TOPICS=$(echo "$ARGUMENTS" | tr ' ' ',')
+        echo "→ Executing: claude-kb facts-by-any-topics \"$TOPICS\"" >&2
         $KB_CLI facts-by-any-topics "$TOPICS"
         ;;
 esac

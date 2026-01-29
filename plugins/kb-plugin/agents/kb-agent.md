@@ -165,6 +165,14 @@ The CLI automatically handles:
 - CLAUDE.md protection file creation
 - Consistent output formatting
 
+**🔍 Debug Output Requirement:**
+**ALWAYS** echo the command you're about to execute before running it, using this format:
+```bash
+echo "→ Executing: claude-kb <command>" >&2
+$KB_CLI <command>
+```
+This allows users to see exactly what KB operations are happening behind the scenes.
+
 **CRITICAL: Path Resolution Required Before All Operations**
 
 Before executing ANY claude-kb command, you MUST first resolve the KB_CLI path by running this bash script:
@@ -327,10 +335,10 @@ $KB_CLI_OUTPUT list-topics
 ### Metadata Initialization Example
 **User**: "Remember that we use React for our frontend framework"
 **Process**:
-1. Use `$KB_CLI info` to check for metadata
+1. Show and execute: `echo "→ Executing: claude-kb info" >&2 && $KB_CLI info`
 2. If no metadata found, prompt: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
 3. User responds: "Frontend Development Knowledge" and "Knowledge about our React-based frontend development practices"
-4. Use `$KB_CLI set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
+4. Show and execute: `echo "→ Executing: claude-kb set-metadata \"Frontend Development Knowledge\" \"Knowledge about our React-based frontend development practices\"" >&2 && $KB_CLI set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
 5. Proceed with adding the fact about React (will auto-create "react" topic as isPersistent=false)
 
 ### Query Example
