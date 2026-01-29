@@ -100,7 +100,8 @@ if [[ -z "$KB_CLI" ]]; then
 fi
 
 # Security: Only allow read-only commands
-COMMAND="$1"
+# Extract first argument from $ARGUMENTS (skills use $ARGUMENTS, not $1)
+COMMAND=$(echo $ARGUMENTS | awk '{print $1}')
 case "$COMMAND" in
     "info"|"list-topics"|"list-facts"|"facts-by-any-topics"|"facts-by-all-topics")
         # Safe read-only operations - allow execution
