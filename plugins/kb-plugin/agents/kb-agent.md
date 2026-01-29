@@ -1,6 +1,8 @@
 ---
 name: kb-agent
-description: Unified knowledge base agent for querying, managing, and organizing project memory. Handles both fast retrieval and sophisticated knowledge curation.
+description: |
+  Unified knowledge base agent for querying, managing, and organizing project memory.
+  Saves source URLs to kb/sources.md - include relevant URLs from conversation when invoking for knowledge additions.
 tools: Bash
 allowed-tools: Bash
 model: opus
@@ -128,6 +130,38 @@ For explicit topic creation requests:
 
 **Step 3: Hyperlink Detection and Saving (Automatic, No Confirmation)**
 
+## Invocation Protocol: URL Context Passing
+
+When kb-agent is invoked for knowledge addition, the invoking agent can include URLs from recent conversation history using this format:
+
+```
+[Context URLs: https://url1.com (description), https://url2.com (description), ...]
+```
+
+The agent will parse these context URLs, filter for relevance, and save alongside immediate URLs.
+
+**Step 3a: Process Context URLs from Invocation**
+
+Check invocation message for context URLs: "[Context URLs: ...]"
+
+**Parsing**:
+- Extract URLs and descriptions: "https://example.com (description)"
+- These were mentioned in earlier conversation before current request
+
+**Relevance Filtering**:
+- Only save URLs related to the knowledge being added
+- Use semantic understanding to determine relevance
+- When unsure, prefer saving (non-destructive)
+
+**Processing**:
+```bash
+# For each relevant URL
+echo "→ Executing: claude-kb save-link \"<url>\" \"<title>\"" >&2
+$KB_CLI save-link "<url>" "<title>"
+```
+
+**Step 3b: Detect URLs in Immediate Input**
+
 When adding facts, detect and save hyperlinks from user input:
 
 **URL Detection Patterns**:
@@ -160,6 +194,11 @@ User: "Remember we use React at https://react.dev for frontend"
 - If error: "Added fact but couldn't save link: [error]"
 
 **No User Confirmation Needed**: Automatic for detected URLs (non-destructive, clearly intentional).
+
+**Step 3c: Deduplication**:
+- Combine URLs from context (3a) + immediate input (3b)
+- Remove duplicates before saving
+- CLI also handles duplicates, but dedupe within invocation first
 
 **Step 4: Management Operations**
 For knowledge addition/organization:
@@ -492,7 +531,16 @@ This allows users to see exactly what KB operations are happening behind the sce
 
 **CRITICAL: Path Resolution Required Before All Operations**
 
-Before executing ANY claude-kb command, you MUST first resolve the KB_CLI path. Use this bash script:
+Before executing ANY claude-kb command, you MUST first resolve the KB_CLI path in a SEPARATE bash call at the START of your agent execution. This keeps permission prompts clean and readable.
+
+**Two-Step Pattern:**
+
+1. **First bash call**: Resolve path (use description: "Resolve KB CLI path")
+2. **Subsequent bash calls**: Use `$KB_CLI` directly for operations
+
+Bash environment variables persist within your bash session, so you only need to resolve once per agent invocation.
+
+**Step 1: Path Resolution (separate bash call)**
 
 ```bash
 # Resolve KB CLI path - checks multiple installation locations
@@ -525,34 +573,31 @@ if [[ -z "$KB_CLI" ]]; then
     echo "  - System PATH" >&2
     exit 1
 fi
+
+# Export for subsequent calls
+export KB_CLI
+echo "KB CLI resolved to: $KB_CLI"
 ```
 
-**Usage Pattern:**
-Run this resolution script ONCE at the start, then use $KB_CLI for all operations:
+**Step 2: Clean Operations (subsequent bash calls)**
 
 ```bash
-# Resolve path once
-KB_CLI=""
-CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
-if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
-    LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
-    if [[ -n "$LATEST_VERSION" && -x "$LATEST_VERSION/bin/claude-kb" ]]; then
-        KB_CLI="$LATEST_VERSION/bin/claude-kb"
-    fi
-fi
-if [[ -z "$KB_CLI" ]]; then
-    KB_CLI=$(which claude-kb 2>/dev/null)
-fi
-
-# Use it for all operations
+# Each operation is now clean and readable
+echo "→ Executing: claude-kb info" >&2
 $KB_CLI info
+
+echo "→ Executing: claude-kb list-topics" >&2
 $KB_CLI list-topics
+
+echo "→ Executing: claude-kb add-fact \"content\" \"topics\"" >&2
 $KB_CLI add-fact "content" "topics"
 ```
 
 **Important Notes:**
 - Always use `$KB_CLI` (the resolved path) instead of bare `claude-kb` commands
-- Resolve the path at the START of every task, not per command
+- Resolve the path in a SEPARATE bash call at the START of your agent turn
+- All subsequent operations use `$KB_CLI` without re-resolving (variable persists in bash session)
+- This keeps permission prompts clean - users see only the actual operation, not resolution boilerplate
 - If resolution fails, report the error to the user immediately
 
 ## Available Commands
@@ -632,43 +677,71 @@ $KB_CLI add-fact "content" "topics"
 ### Explicit Topic Creation Example
 **User**: "Create a topic for authentication decisions"
 **Process**:
-1. Recognize explicit topic creation request
-2. Use `$KB_CLI add-topic "authentication" "User authentication decisions and patterns" true`
-3. Provide feedback: "Created persistent topic 'authentication': User authentication decisions and patterns. This topic is protected and will serve as a strong organizational anchor for related decisions."
+1. First bash call - Resolve KB CLI path (see path resolution section above)
+2. Recognize explicit topic creation request
+3. Use `$KB_CLI add-topic "authentication" "User authentication decisions and patterns" true`
+4. Provide feedback: "Created persistent topic 'authentication': User authentication decisions and patterns. This topic is protected and will serve as a strong organizational anchor for related decisions."
 
 ### Metadata Initialization Example
 **User**: "Remember that we use React for our frontend framework"
 **Process**:
-1. Show and execute: `echo "→ Executing: claude-kb info" >&2 && $KB_CLI info`
-2. If no metadata found, prompt: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
-3. User responds: "Frontend Development Knowledge" and "Knowledge about our React-based frontend development practices"
-4. Show and execute: `echo "→ Executing: claude-kb set-metadata \"Frontend Development Knowledge\" \"Knowledge about our React-based frontend development practices\"" >&2 && $KB_CLI set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
-5. Proceed with adding the fact about React (will auto-create "react" topic as isPersistent=false)
+1. First bash call - Resolve KB CLI path (see path resolution section above)
+2. Show and execute: `echo "→ Executing: claude-kb info" >&2 && $KB_CLI info`
+3. If no metadata found, prompt: "I notice this knowledge base doesn't have metadata yet. What should I call this knowledge base and how would you describe it?"
+4. User responds: "Frontend Development Knowledge" and "Knowledge about our React-based frontend development practices"
+5. Show and execute: `echo "→ Executing: claude-kb set-metadata \"Frontend Development Knowledge\" \"Knowledge about our React-based frontend development practices\"" >&2 && $KB_CLI set-metadata "Frontend Development Knowledge" "Knowledge about our React-based frontend development practices"`
+6. Proceed with adding the fact about React (will auto-create "react" topic as isPersistent=false)
 
 ### Query Example
 **User**: "What did we decide about authentication?"
 **Process**:
-1. Use `$KB_CLI list-topics` to see available topics
-2. Identify relevant topics (e.g., "authentication", "security", "api")
-3. Use `$KB_CLI facts-by-any-topics authentication,security,api`
-4. Synthesize findings and present key decisions with context
+1. First bash call - Resolve KB CLI path (see path resolution section above)
+2. Use `$KB_CLI list-topics` to see available topics
+3. Identify relevant topics (e.g., "authentication", "security", "api")
+4. Use `$KB_CLI facts-by-any-topics authentication,security,api`
+5. Synthesize findings and present key decisions with context
 
 ### Hyperlink Detection Example
 **User**: "Remember we use Anthropic's Claude API at https://docs.anthropic.com/claude/reference for our chatbot"
 
 **Process**:
-1. **Detect URL**: https://docs.anthropic.com/claude/reference
-2. **Extract title**: "Anthropic's Claude API" (from context)
-3. **Save link first**:
+1. **First bash call**: Resolve KB CLI path (see path resolution section above)
+2. **Detect URL**: https://docs.anthropic.com/claude/reference
+3. **Extract title**: "Anthropic's Claude API" (from context)
+4. **Save link first**:
    ```bash
    echo "→ Executing: claude-kb save-link \"https://docs.anthropic.com/claude/reference\" \"Anthropic Claude API\"" >&2
    $KB_CLI save-link "https://docs.anthropic.com/claude/reference" "Anthropic Claude API"
    ```
-4. **Add fact**:
+5. **Add fact**:
    ```bash
+   echo "→ Executing: claude-kb add-fact \"Chatbot uses Anthropic Claude API\" \"api,chatbot,anthropic\"" >&2
    $KB_CLI add-fact "Chatbot uses Anthropic Claude API" "api,chatbot,anthropic"
    ```
-5. **Report**: "I've added the fact about the Anthropic Claude API and saved the documentation link to kb/sources.md."
+6. **Report**: "I've added the fact about the Anthropic Claude API and saved the documentation link to kb/sources.md."
+
+### Context URLs Protocol Example
+**Invocation message**:
+```
+User wants to add: "Remember we use React and Next.js for frontend framework"
+
+[Context URLs: https://react.dev (React documentation - mentioned 3 messages ago), https://nextjs.org (Next.js framework - mentioned 5 messages ago)]
+```
+
+**Process**:
+1. **First bash call**: Resolve KB CLI path (see path resolution section above)
+2. Parse context URLs: react.dev, nextjs.org
+3. User wants to add facts about React and Next.js (both relevant)
+4. Save both URLs:
+   ```bash
+   echo "→ Executing: claude-kb save-link \"https://react.dev\" \"React documentation\"" >&2
+   $KB_CLI save-link "https://react.dev" "React documentation"
+   echo "→ Executing: claude-kb save-link \"https://nextjs.org\" \"Next.js framework\"" >&2
+   $KB_CLI save-link "https://nextjs.org" "Next.js framework"
+   ```
+4. Detect no additional URLs in immediate input
+5. Add facts about frontend framework
+6. Report: "I've added the facts about React and Next.js for the frontend framework, and saved both documentation links to kb/sources.md."
 
 ### Management Example
 **User**: "Remember that we chose React Context over Redux for state management"
