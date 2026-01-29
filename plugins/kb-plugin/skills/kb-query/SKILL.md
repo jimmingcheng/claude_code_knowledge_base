@@ -1,6 +1,6 @@
 ---
 name: kb-query
-description: Read-only knowledge base queries. Safe access to KB information without mutation capabilities.
+description: Query the knowledge base for stored information. Use to list topics, search facts by topic, or get KB metadata. Read-only - use kb-agent for modifications.
 allowed-tools: []
 argument-hint: [query-command] [args...]
 ---
