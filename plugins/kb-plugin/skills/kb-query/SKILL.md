@@ -1,8 +1,8 @@
 ---
 name: kb-query
-description: Query the knowledge base for stored information. Use to list topics, search facts by topic, or get KB metadata. Read-only - use kb-agent for modifications.
+description: Search the knowledge base for facts by topic. Pass topic names to search (e.g., "authentication security" searches for facts about authentication OR security). Also supports commands like "info", "list-topics", "list-facts". Read-only - use kb-agent for modifications.
 allowed-tools: []
-argument-hint: [query-command] [args...]
+argument-hint: [topics...] or [command]
 ---
 
 # Knowledge Base Queries (Read-Only)
@@ -15,38 +15,31 @@ Execute read-only knowledge base queries safely. This skill provides secure acce
 # Use CLAUDE_PLUGIN_ROOT for simple, reliable path resolution
 KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
 
-# Debug: Show what arguments we received
-echo "Debug: ARGUMENTS = '$ARGUMENTS'" >&2
-echo "Debug: All args: $@" >&2
-echo "Debug: Arg count: $#" >&2
-echo "Debug: First arg (\$1): '$1'" >&2
+# Parse arguments: first word determines behavior
+FIRST_ARG=$(echo "$ARGUMENTS" | awk '{print $1}')
 
-# Security: Only allow read-only commands
-# Extract first argument from $ARGUMENTS (skills use $ARGUMENTS, not $1)
-COMMAND=$(echo $ARGUMENTS | awk '{print $1}')
-case "$COMMAND" in
+# Check if first argument is a known command
+case "$FIRST_ARG" in
     "info"|"list-topics"|"list-facts"|"facts-by-any-topics"|"facts-by-all-topics")
-        # Safe read-only operations - allow execution
-        echo "Debug: Executing read-only KB query: $COMMAND" >&2
+        # Direct command invocation - pass through as-is
         $KB_CLI $ARGUMENTS
         ;;
     "add-fact"|"add-topic"|"update-fact"|"remove-fact"|"remove-topic"|"set-metadata"|"set-topic-persistence"|"merge-topics"|"rename-topic")
         # Mutation operations - block with helpful message
-        echo "Error: '$COMMAND' is not allowed in read-only mode." >&2
+        echo "Error: '$FIRST_ARG' is not allowed in read-only mode." >&2
         echo "Mutation operations are restricted to kb-agent for security." >&2
-        echo "Use 'claude-code task kb-agent \"<your request>\"' for content modifications." >&2
+        echo "Use kb-agent for content modifications." >&2
         exit 1
         ;;
     "")
-        echo "Error: No command specified." >&2
-        echo "Available read-only commands: info, list-topics, list-facts, facts-by-any-topics, facts-by-all-topics" >&2
-        exit 1
+        # No arguments - show info
+        $KB_CLI info
         ;;
     *)
-        echo "Error: Unknown or restricted command '$COMMAND'." >&2
-        echo "Available read-only commands: info, list-topics, list-facts, facts-by-any-topics, facts-by-all-topics" >&2
-        echo "For content modifications, use: claude-code task kb-agent \"<your request>\"" >&2
-        exit 1
+        # Treat arguments as topic search (default behavior)
+        # Convert space-separated topics to comma-separated for facts-by-any-topics
+        TOPICS=$(echo "$ARGUMENTS" | tr ' ' ',')
+        $KB_CLI facts-by-any-topics "$TOPICS"
         ;;
 esac
 `
