@@ -175,75 +175,24 @@ This allows users to see exactly what KB operations are happening behind the sce
 
 **CRITICAL: Path Resolution Required Before All Operations**
 
-Before executing ANY claude-kb command, you MUST first resolve the KB_CLI path by running this bash script:
+Before executing ANY claude-kb command, you MUST first set the KB_CLI path:
 
 ```bash
-# Resolve KB CLI path
-CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
-KB_CLI=""
-
-# Claude Code plugin cache (user-level installations) - CHECK FIRST
-if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
-    # Find the latest version by sorting version directories
-    LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
-    if [[ -n "$LATEST_VERSION" ]]; then
-        # Prefer claude-kb binary, fallback to cli.js
-        if [[ -x "$LATEST_VERSION/bin/claude-kb" ]]; then
-            KB_CLI="$LATEST_VERSION/bin/claude-kb"
-        elif [[ -x "$LATEST_VERSION/bin/cli.js" ]]; then
-            KB_CLI="node $LATEST_VERSION/bin/cli.js"
-        fi
-    fi
-fi
-
-# Fallback to marketplace installation
-if [[ -z "$KB_CLI" && -x "$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb" ]]; then
-    KB_CLI="$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb"
-fi
-
-# Project-level installations
-if [[ -z "$KB_CLI" ]]; then
-    if [[ -x "./bin/claude-kb" ]]; then
-        KB_CLI="./bin/claude-kb"
-    elif [[ -x "node_modules/@claude-code/kb-plugin/bin/claude-kb" ]]; then
-        KB_CLI="node_modules/@claude-code/kb-plugin/bin/claude-kb"
-    fi
-fi
-
-# Dynamic search fallbacks
-if [[ -z "$KB_CLI" ]]; then
-    KB_CLI=$(find . -name "claude-kb" -type f -executable 2>/dev/null | head -1)
-    if [[ -z "$KB_CLI" ]]; then
-        KB_CLI=$(which claude-kb 2>/dev/null)
-    fi
-fi
-
-# Error if nothing found
-if [[ -z "$KB_CLI" ]]; then
-    echo "Error: claude-kb CLI not found. Please ensure kb-plugin is properly installed." >&2
-    exit 1
-fi
-
-echo "KB_CLI=$KB_CLI"
+# Simple, reliable path resolution using CLAUDE_PLUGIN_ROOT
+KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
 ```
 
 **Usage Pattern:**
-1. Run the path resolution script ONCE at the start of your operation
-2. Extract the KB_CLI path from the output
-3. Use $KB_CLI for all subsequent commands in that session
+Set KB_CLI once at the start of your operation, then use it for all subsequent commands:
 
-Example:
 ```bash
-# Step 1: Resolve path (do this once)
-KB_CLI_OUTPUT=$(bash -c '
-CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
-# ... [full resolution script] ...
-echo "$KB_CLI"
-')
+# Set the path
+KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
 
-# Step 2: Use resolved path for operations
-$KB_CLI_OUTPUT info
-$KB_CLI_OUTPUT list-topics
+# Use it for all operations
+$KB_CLI info
+$KB_CLI list-topics
+$KB_CLI add-fact "content" "topics"
 ```
 
 **Important Notes:**
