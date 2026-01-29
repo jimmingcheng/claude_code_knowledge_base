@@ -175,19 +175,57 @@ This allows users to see exactly what KB operations are happening behind the sce
 
 **CRITICAL: Path Resolution Required Before All Operations**
 
-Before executing ANY claude-kb command, you MUST first set the KB_CLI path:
+Before executing ANY claude-kb command, you MUST first resolve the KB_CLI path. Use this bash script:
 
 ```bash
-# Simple, reliable path resolution using CLAUDE_PLUGIN_ROOT
-KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
+# Resolve KB CLI path - checks multiple installation locations
+KB_CLI=""
+CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
+
+# Check plugin cache (user-level installations)
+if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
+    LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
+    if [[ -n "$LATEST_VERSION" && -x "$LATEST_VERSION/bin/claude-kb" ]]; then
+        KB_CLI="$LATEST_VERSION/bin/claude-kb"
+    fi
+fi
+
+# Fallback to marketplace installation
+if [[ -z "$KB_CLI" && -x "$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb" ]]; then
+    KB_CLI="$HOME/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/claude-kb"
+fi
+
+# Fallback to PATH
+if [[ -z "$KB_CLI" ]]; then
+    KB_CLI=$(which claude-kb 2>/dev/null)
+fi
+
+# Error if not found
+if [[ -z "$KB_CLI" ]]; then
+    echo "Error: claude-kb not found. Checked:" >&2
+    echo "  - $CACHE_BASE/kb-plugin/*/bin/claude-kb" >&2
+    echo "  - ~/.claude/plugins/marketplaces/.../claude-kb" >&2
+    echo "  - System PATH" >&2
+    exit 1
+fi
 ```
 
 **Usage Pattern:**
-Set KB_CLI once at the start of your operation, then use it for all subsequent commands:
+Run this resolution script ONCE at the start, then use $KB_CLI for all operations:
 
 ```bash
-# Set the path
-KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
+# Resolve path once
+KB_CLI=""
+CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
+if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
+    LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
+    if [[ -n "$LATEST_VERSION" && -x "$LATEST_VERSION/bin/claude-kb" ]]; then
+        KB_CLI="$LATEST_VERSION/bin/claude-kb"
+    fi
+fi
+if [[ -z "$KB_CLI" ]]; then
+    KB_CLI=$(which claude-kb 2>/dev/null)
+fi
 
 # Use it for all operations
 $KB_CLI info
