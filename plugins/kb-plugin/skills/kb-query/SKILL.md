@@ -12,10 +12,28 @@ Execute read-only knowledge base queries safely. This skill provides secure acce
 ## Command Execution
 
 !`
-# Dynamic KB CLI resolution with fallback paths (same as main kb skill)
+# TEST: Check if CLAUDE_PLUGIN_ROOT is available in skills
+echo "=== PATH RESOLUTION TEST ===" >&2
+echo "CLAUDE_PLUGIN_ROOT = '${CLAUDE_PLUGIN_ROOT}'" >&2
 
-# Claude Code plugin cache (user-level installations) - CHECK FIRST
-CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
+# If CLAUDE_PLUGIN_ROOT is set, use the simple solution
+if [[ -n "${CLAUDE_PLUGIN_ROOT}" ]]; then
+    echo "✓ CLAUDE_PLUGIN_ROOT is set, using simple path resolution" >&2
+    KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
+
+    if [[ -x "$KB_CLI" ]]; then
+        echo "✓ Found claude-kb at: $KB_CLI" >&2
+    else
+        echo "✗ ERROR: CLAUDE_PLUGIN_ROOT is set but claude-kb not executable at: $KB_CLI" >&2
+        exit 1
+    fi
+else
+    echo "✗ CLAUDE_PLUGIN_ROOT not set, falling back to complex resolution" >&2
+
+    # Dynamic KB CLI resolution with fallback paths (same as main kb skill)
+
+    # Claude Code plugin cache (user-level installations) - CHECK FIRST
+    CACHE_BASE="$HOME/.claude/plugins/cache/claude-code-knowledge-base"
 if [[ -d "$CACHE_BASE/kb-plugin" ]]; then
     # Find the latest version by sorting version directories
     LATEST_VERSION=$(find "$CACHE_BASE/kb-plugin" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
@@ -67,6 +85,9 @@ if [[ -z "$KB_CLI" ]]; then
     if [[ -z "$KB_CLI" ]]; then
         KB_CLI=$(which claude-kb 2>/dev/null)
     fi
+fi
+
+    # End of CLAUDE_PLUGIN_ROOT fallback else block
 fi
 
 # Final error if nothing found
