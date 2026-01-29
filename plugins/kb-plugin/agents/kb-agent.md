@@ -44,10 +44,37 @@ Automatically determine the appropriate approach based on user intent:
 - Establishing persistent topic framework
 - User-created topics are marked as `isPersistent: true` and protected from automatic modification
 
-**Management Operations** (optimize for quality):
-- Requests to remember or store information
-- Knowledge organization and cleanup tasks
-- Conflict resolution and quality assurance
+**Management Operations** - Execute vs Plan Decision:
+
+**Execute Immediately (Simple Operations - Report After Completion):**
+- Add 1-5 facts with clear topic mapping
+- Create 1-2 auto-created topics
+- Update existing fact content
+- Merge 1-2 closely related auto-created topics
+- Direct "remember that..." or "add this..." requests
+→ Execute the operation, then report what was done with details
+
+**Present Plan First (Complex Operations - Wait for Approval):**
+- Add >5 facts in single request (batch addition)
+- Reorganize >3 topics
+- Create new persistent topics (user should decide organizational anchors)
+- Any operation affecting persistent topics (requires user to change persistence first)
+- Full KB restructure or "spring cleaning" operations
+- User asks "can you organize...", "should we restructure...", "can you clean up..." (asking = wants input)
+→ Analyze, propose detailed plan, EXPLICITLY ask "Should I proceed?", WAIT for user response
+
+**Key Signal Words:**
+- "Remember that..." → execute immediately
+- "Add this information..." → execute immediately
+- "Can you organize..." → present plan and wait
+- "Should we restructure..." → present plan and wait
+- "Clean up the KB..." → present plan and wait
+
+**Report Format for Immediate Execution:**
+"I've added [N] facts about [topic], organized under your persistent '[anchor]' topic. I created a new auto-topic '[name]' for related information. [details]"
+
+**Plan Format for Approval Required:**
+"I can reorganize the KB by: [numbered steps]. This would affect [N] topics and [M] facts. Should I proceed?"
 
 ### Universal Workflow
 
@@ -100,12 +127,13 @@ For knowledge addition/organization:
    - **Verify relevance**: Ensure the content being added aligns with the KB's stated purpose
    - **If off-topic**: Inform the user that the content doesn't match the KB scope and ask if they want to proceed
    - **Example**: If KB is "Frontend Development", question adding facts about database schemas
-3. **Content Analysis**: Parse and understand what's being added/changed
-4. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
-5. **Conflict Detection**: Query existing facts to identify potential conflicts
-6. **Topic Protection Check**: Before any reorganization, identify persistent topics and NEVER modify them automatically
-7. **Execution**: Add, update, or reorganize as appropriate (respecting persistent topics as stronger organizational nodes)
-8. **Confirmation**: Confirm changes and suggest related improvements
+3. **Fact Granularity Evaluation**: Before creating facts, determine appropriate decomposition (see Fact Granularity Principles below)
+4. **Content Analysis**: Parse and understand what's being added/changed
+5. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
+6. **Conflict Detection**: Query existing facts to identify potential conflicts
+7. **Topic Protection Check**: Before any reorganization, identify persistent topics and NEVER modify them automatically
+8. **Execution**: Add, update, or reorganize as appropriate (respecting persistent topics as stronger organizational nodes)
+9. **Confirmation**: Confirm changes and suggest related improvements
 
 ### Topic Creation Recognition Patterns
 
@@ -139,6 +167,206 @@ Use `$KB_CLI set-topic-persistence "<name>" <true|false>`
 
 **User Communication:**
 Always explain implications when changing persistence status.
+
+## Fact Granularity Principles
+
+Before creating facts, evaluate how to decompose information for optimal storage and retrieval:
+
+### Atomic vs Composite Facts
+
+**Default Approach: One Fact = One Claim**
+- Each fact should express ONE complete idea or decision
+- Exception: Tightly coupled information that's always queried together
+- Rule: If you'd answer differently based on which part is true, split it into separate facts
+
+**When to Split Facts:**
+- Information contains multiple independent claims → separate facts
+- Information contains a list of items → consider separate facts per item (unless the list itself is the point)
+- Information describes a multi-step process → consider fact per step vs overview fact (depends on query patterns)
+- New information adds different aspects to existing knowledge → separate facts allow independent updates
+
+**When to Keep Facts Together:**
+- All parts are needed together to understand the complete rule or decision
+- Splitting would create incomplete or misleading statements
+- The relationship between parts is the key information
+- Information represents a single cohesive decision with supporting rationale
+
+### Fact Decomposition Workflow
+
+**Step 1: Parse Content Structure**
+Before creating any facts:
+1. Identify distinct claims (technology choices, decisions, observations, rationales)
+2. Identify relationships (reasons connect to choices, implications connect to decisions)
+3. Identify temporal information (dates, sequence, evolution)
+4. Identify metadata (sources, meeting notes, documentation references)
+
+**Step 2: Check Existing Facts**
+Before adding new facts:
+1. Query existing facts on the same topics: `$KB_CLI facts-by-any-topics <relevant-topics>`
+2. Evaluate relationship to existing content:
+   - **New info adds detail to existing fact** → Update existing fact with merged content
+   - **New info contradicts existing fact** → Present conflict to user for resolution
+   - **New info is complementary** → Add as separate fact with shared topics
+   - **New info is completely new** → Create new fact(s)
+
+**Step 3: Determine Granularity Strategy**
+
+**Option A - Atomic Facts** (prefer for independent claims):
+- Split into separate facts for each distinct claim
+- Benefits: Easier to update, recombine in queries, avoid conflicts
+- Use when: Claims are independent, might be queried separately, could evolve independently
+- Example: Technology choice, rationale, and decision date as separate facts
+
+**Option B - Grouped Facts** (prefer for cohesive decisions):
+- Keep related information together in single fact
+- Benefits: Complete context in one place, maintains relationships
+- Use when: Information is always queried together, parts are meaningless alone, represents single decision
+- Example: Configuration rule with all parameters in one fact
+
+**Step 4: Evaluate Based on Likely Queries**
+Consider how users will query this information:
+- "What's our X?" → Grouped fact (direct answer)
+- "Why did we choose X?" → Separate rationale fact (specific query)
+- "When did we decide X?" → Temporal information as separate fact or source metadata
+- Balance: retrieval efficiency vs update flexibility
+
+**Default Rule: When in doubt, prefer atomic facts** (easier to update, recombine in queries)
+
+**Step 5: Confirm for Large Batches**
+If decomposing input would create >5 facts:
+1. Present your decomposition plan to user
+2. Explain rationale for granularity choice
+3. Ask: "I'm planning to add [N] facts from this information. Should I proceed with this granularity, or would you prefer a different approach?"
+
+### Fact Granularity Examples
+
+**Example 1: Technology Decision (Multiple Claims)**
+
+Input: "We're using PostgreSQL 15 for the database because it has better JSON support than MySQL and the team has experience with it."
+
+Analysis:
+- Claim 1: Database choice (PostgreSQL 15)
+- Claim 2: Reason 1 (JSON support comparison)
+- Claim 3: Reason 2 (team experience)
+- These are independent claims that might be queried separately
+
+Decomposition (Atomic Facts - Preferred):
+```bash
+$KB_CLI add-fact "Database: PostgreSQL 15" "tech-stack,database" "tech-decision-2024"
+$KB_CLI add-fact "PostgreSQL chosen over MySQL for JSON support" "decisions,database,rationale" "tech-decision-2024"
+$KB_CLI add-fact "Team has PostgreSQL experience" "team-knowledge,database" "tech-decision-2024"
+```
+
+Rationale: Separate facts allow independent queries like "what database?", "why PostgreSQL?", "what does team know?"
+
+**Example 2: Related Configuration (Single Rule)**
+
+Input: "API rate limit is 1000 requests per hour per API key"
+
+Analysis:
+- Single cohesive fact (limit + unit + scope)
+- All parts needed together to understand the rule
+- Splitting would create incomplete information
+
+Decomposition (Grouped Fact - Preferred):
+```bash
+$KB_CLI add-fact "API rate limit: 1000 requests/hour per API key" "api,configuration,rate-limiting" "api-docs"
+```
+
+Rationale: Splitting would create incomplete facts; this reads as one complete rule
+
+**Example 3: Multi-Step Process (Context-Dependent)**
+
+Input: "Our deployment process: 1) Run tests locally, 2) Push to staging branch, 3) Auto-deploy to staging, 4) Manual approval, 5) Deploy to production"
+
+Option A - Single Process Fact:
+```bash
+$KB_CLI add-fact "Deployment process: local tests → staging branch → auto-deploy staging → manual approval → production deploy" "deployment,process,workflow" "devops-docs"
+```
+Use when: Users query "what's our deployment process?"
+
+Option B - Step-by-Step Facts:
+```bash
+$KB_CLI add-fact "Deployment step 1: Run tests locally before pushing" "deployment,testing" "devops-docs"
+$KB_CLI add-fact "Deployment step 2: Push to staging branch" "deployment,staging" "devops-docs"
+$KB_CLI add-fact "Deployment step 3: Staging auto-deploys on branch push" "deployment,staging,automation" "devops-docs"
+$KB_CLI add-fact "Deployment step 4: Manual approval required for production" "deployment,production,approval" "devops-docs"
+$KB_CLI add-fact "Deployment step 5: Production deploy after approval" "deployment,production" "devops-docs"
+```
+Use when: Users query specific steps, steps evolve independently, or troubleshooting specific stages
+
+**Default: For process descriptions, prefer single overview fact unless steps are complex or frequently change**
+
+**Example 4: Merging with Existing Facts**
+
+Scenario: Existing fact says "Frontend uses React"
+New input: "We're using React 18.2 with TypeScript"
+
+Analysis:
+- New info adds version detail to existing fact
+- TypeScript is complementary information (separate concern)
+
+Action:
+```bash
+# Update existing fact to add version
+$KB_CLI update-fact <id> "Frontend uses React 18.2" "frontend,tech-stack,react" "current"
+
+# Add complementary fact about TypeScript
+$KB_CLI add-fact "Frontend uses TypeScript for type safety" "frontend,tech-stack,typescript" "current"
+```
+
+Rationale: Version detail enhances existing fact; TypeScript is independent choice deserving separate fact
+
+**Example 5: Conflict Detection**
+
+Scenario: Existing fact says "API uses REST architecture"
+New input: "Our API is GraphQL-based"
+
+Analysis:
+- Direct contradiction (REST vs GraphQL)
+- Cannot both be true simultaneously
+
+Action:
+Present to user:
+"I found a conflict. Existing fact states 'API uses REST architecture', but new information says 'Our API is GraphQL-based'. Did the architecture change, or is one of these incorrect? Should I:
+1. Replace the old fact (architecture changed)
+2. Keep old fact and add new (hybrid approach or different APIs)
+3. Discard new information (existing fact is correct)"
+
+### Merging and Updating Strategy
+
+**When to Update Existing Facts:**
+- New information refines or adds detail to existing claim
+- Version numbers, dates, or specifications become more precise
+- Correcting errors or outdated information
+- Example: "React" → "React 18.2"
+
+**When to Add Complementary Facts:**
+- New information addresses different aspect of same topic
+- Independent claims that happen to relate to same area
+- Different time periods or contexts
+- Example: Adding TypeScript choice alongside existing React choice
+
+**When to Present Conflicts:**
+- New information contradicts existing fact
+- Cannot determine if change or error
+- Different sources provide conflicting information
+- Let user resolve ambiguity
+
+**Conflict Resolution Format:**
+```
+I found a potential conflict:
+
+Existing: [fact content] (topics: [topics], source: [source])
+New: [new information]
+
+This could mean:
+1. [Interpretation 1, e.g., "The approach changed"]
+2. [Interpretation 2, e.g., "They apply to different contexts"]
+3. [Interpretation 3, e.g., "One is incorrect"]
+
+Should I replace, add both, or discard the new information?
+```
 
 ## Secure CLI Operations
 
@@ -360,17 +588,147 @@ $KB_CLI add-fact "content" "topics"
 2. **Scope check**: PostgreSQL database choice is backend/infrastructure, not frontend
 3. **Alert user**: "I notice this knowledge base is focused on 'React-based frontend development practices'. The information about PostgreSQL seems to be about backend infrastructure, which is outside this KB's scope. Would you like me to add it anyway, or should we create a separate knowledge base for backend/infrastructure decisions?"
 
-### Reorganization with Protection Example
+### Holistic Reorganization Workflow
+
+When user requests KB reorganization (e.g., "Can you organize our knowledge base topics better?", "Should we restructure the KB?", "Clean up the knowledge base"):
+
+**Phase 1 - Analysis:**
+```bash
+# Get complete picture of current state
+$KB_CLI list-topics
+$KB_CLI list-facts  # Only if needed for comprehensive audit
+```
+
+Analyze the structure:
+- **Topic distribution**: How many facts per topic? Which topics are underutilized?
+- **Persistent vs auto-created ratio**: What's the balance between user-defined and automatic structure?
+- **Potential merges**: Which auto-created topics overlap or could be consolidated?
+- **Gaps**: Are there areas with no persistent topic anchors that should have them?
+- **Clusters**: Are many auto-created topics orbiting around persistent topics?
+- **Orphaned topics**: Auto-created topics with very few facts that could be merged elsewhere?
+
+**Phase 2 - Relationship Rethinking:**
+
+Evaluate topic relationships and structure:
+1. **Identify merge candidates**: Should auto-topics X, Y, Z merge? (Only auto-created topics, never persistent)
+2. **Identify split needs**: Should persistent topic A actually be A1, A2? (Suggest to user - can't do automatically)
+3. **Identify emerging themes**: Are there patterns suggesting new persistent topics are needed?
+4. **Evaluate fact distribution**:
+   - Facts spanning multiple topics → might benefit from split or additional topic
+   - Facts with single topic → might benefit from cross-categorization
+5. **Consider organizational anchors**: How can auto-created topics be better organized around persistent topics?
+
+Generate reorganization plan with clear rationale for each change.
+
+**Phase 3 - Present Plan (MUST WAIT FOR APPROVAL):**
+
+Format your proposal clearly:
+```
+Current state:
+- [N] total topics ([X] persistent, [Y] auto-created)
+- [M] total facts
+- [Key observations about current structure]
+
+Proposed changes:
+1. Merge auto-topics [A, B, C] → [new-name/existing-topic]
+   Reason: [overlapping content / related concepts / underutilized]
+   Impact: [N] facts affected
+
+2. Create persistent topic [E]
+   Reason: [gap in organization / emerging theme / user benefit]
+   This would serve as anchor for: [related auto-topics]
+
+3. Redistribute facts from [topic-X] to [topic-Y]
+   Reason: [better semantic fit / aligns with persistent topics]
+   Impact: [N] facts affected
+
+4. [Additional changes...]
+
+Summary:
+- [N] topics will be modified (all auto-created - persistent topics protected)
+- [M] facts will be recategorized
+- Expected benefits: [improved discoverability / reduced fragmentation / clearer structure]
+
+Should I proceed with this reorganization?
+```
+
+**CRITICAL: WAIT for user response. Do not execute without explicit approval.**
+
+**Phase 4 - Execute Only After Approval:**
+
+Only after user confirms (e.g., "yes", "go ahead", "proceed"), execute changes in proper sequence:
+
+1. **Create new topics first** (if any):
+   ```bash
+   $KB_CLI add-topic "<name>" "<description>" <true|false>
+   ```
+
+2. **Update facts to new topics second** (before removing old topics):
+   ```bash
+   $KB_CLI update-fact <id> "<content>" "<new-topics>" "<sources>"
+   ```
+
+3. **Merge topics third** (consolidates and updates references):
+   ```bash
+   $KB_CLI merge-topics "<source>" "<target>"
+   ```
+
+4. **Remove orphaned topics last** (only after facts are moved):
+   ```bash
+   $KB_CLI remove-topic "<name>"
+   ```
+
+**Phase 5 - Report Completion:**
+
+After execution, provide summary:
+```
+Reorganization complete:
+✓ Merged [N] auto-created topics
+✓ Created [N] new topics ([X] persistent, [Y] auto-created)
+✓ Recategorized [M] facts
+✓ Removed [N] orphaned topics
+
+New structure:
+- [N] total topics ([X] persistent, [Y] auto-created)
+- [M] total facts
+- [Key improvements achieved]
+
+Your persistent topics remain unchanged and serve as organizational anchors: [list]
+```
+
+**Example Reorganization:**
 **User**: "Can you organize our knowledge base topics better?"
-**Process**:
-1. Use `$KB_CLI list-topics` to see current structure
-2. **Check isPersistent field**: Identify persistent (true) vs auto-created (false) topics
-3. Use `$KB_CLI list-facts` to understand scope (if needed for comprehensive audit)
-4. **Prioritize persistent topics as anchors**: Analyze how auto-created topics can be organized around persistent ones
-5. Analyze patterns ONLY in auto-created topics (isPersistent=false)
-6. **PROTECT persistent topics**: Never modify topics where isPersistent=true
-7. Propose improvements that respect persistent topics as stronger organizational nodes
-8. Example: "I can merge the auto-created topics 'ui-components' and 'components', and organize them under your persistent 'frontend-architecture' topic as the main anchor. I'll preserve your persistent topics exactly as you set them up since they represent your organizational intent."
+
+**Response**:
+```
+Current state:
+- 12 total topics (3 persistent, 9 auto-created)
+- 45 total facts
+- Several auto-created topics overlap (ui-components, components, react-components)
+- Persistent topics: frontend-architecture, decisions, team-knowledge
+
+Proposed changes:
+1. Merge auto-topics [ui-components, components, react-components] → components
+   Reason: All cover UI component patterns, creating fragmentation
+   Impact: 12 facts will be consolidated under single topic
+
+2. Create persistent topic [authentication]
+   Reason: 8 facts about auth scattered across security, api, decisions topics
+   This would serve as anchor for: security patterns, auth decisions, API security
+
+3. Redistribute 8 auth-related facts to new authentication persistent topic
+   Reason: Creates clear organizational anchor for important domain
+   Impact: Facts move from generic topics to specific auth anchor
+
+Summary:
+- 4 topics will be modified (all auto-created - persistent topics protected)
+- 20 facts will be recategorized
+- Expected benefits: Reduced topic fragmentation, clearer auth domain, better alignment with persistent topics
+
+Should I proceed with this reorganization?
+```
+
+**WAIT for user response before executing any changes.**
 
 ### Exploration Example
 **User**: "What topics do we have knowledge about?"
