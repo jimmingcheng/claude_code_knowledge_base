@@ -63,6 +63,20 @@ Automatically determine the appropriate approach based on user intent:
 - User asks "can you organize...", "should we restructure...", "can you clean up..." (asking = wants input)
 → Analyze, propose detailed plan, EXPLICITLY ask "Should I proceed?", WAIT for user response
 
+**Content-Based Triggers** (regardless of quantity):
+- Facts representing major decisions:
+  - Technology/architecture choices ("We're switching from X to Y")
+  - Security/compliance policies
+  - Financial/budget decisions
+  - Legal/contractual information
+- Facts contradicting existing persistent topics:
+  - User created persistent topics to represent their organizational structure
+  - New facts that conflict with this structure should be reviewed
+- Facts representing significant project changes:
+  - Development workflow changes
+  - Deployment process modifications
+  - Team structure changes
+
 **Key Signal Words:**
 - "Remember that..." → execute immediately
 - "Add this information..." → execute immediately
@@ -150,6 +164,8 @@ User: "Remember we use React at https://react.dev for frontend"
 **Step 4: Management Operations**
 For knowledge addition/organization:
 
+⚠️ **IMPORTANT**: This workflow includes a mandatory approval checkpoint (see step 4 below). Review the "Execute vs Plan Decision" section (lines 47-78) for complete approval criteria before proceeding.
+
 ⚠️ **CRITICAL**: Knowledge base metadata (kb.json) is REQUIRED before creating any topics or facts. All content operations will fail if metadata hasn't been initialized first.
 
 🚫 **NEVER CREATE METADATA AUTONOMOUSLY**: You must NEVER infer, guess, or autonomously create the KB name and description. This MUST come from the user.
@@ -163,12 +179,31 @@ For knowledge addition/organization:
    - **If off-topic**: Inform the user that the content doesn't match the KB scope and ask if they want to proceed
    - **Example**: If KB is "Frontend Development", question adding facts about database schemas
 3. **Fact Granularity Evaluation**: Before creating facts, determine appropriate decomposition (see Fact Granularity Principles below)
-4. **Content Analysis**: Parse and understand what's being added/changed
-5. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
-6. **Conflict Detection**: Query existing facts to identify potential conflicts
-7. **Topic Protection Check**: Before any reorganization, identify persistent topics and NEVER modify them automatically
-8. **Execution**: Add, update, or reorganize as appropriate (respecting persistent topics as stronger organizational nodes)
-9. **Confirmation**: Confirm changes and suggest related improvements
+4. **⚠️ APPROVAL CHECKPOINT - STOP if any of these conditions are met:**
+   - **Quantity**: Decomposition would create >5 facts
+   - **Impact**: Changes would affect >3 topics or any persistent topics
+   - **Content Sensitivity**: Facts involve:
+     - Security, compliance, legal, or financial decisions
+     - Major architectural or technology choices
+     - Changes contradicting existing persistent topics
+     - Significant project direction changes
+   - **User Signal**: User asked "can you...", "should we...", "can you organize..." (seeking input)
+
+   **If ANY condition is met:**
+   1. **STOP execution immediately**
+   2. **Present detailed plan** with: current state, proposed changes, rationale, impact analysis
+   3. **EXPLICITLY ASK**: "Should I proceed with these changes?"
+   4. **WAIT for explicit user approval** (e.g., "yes", "go ahead", "proceed")
+   5. **Only after approval**: Continue to next step
+
+   **If NO conditions are met**: Proceed to Content Analysis
+
+5. **Content Analysis**: Parse and understand what's being added/changed
+6. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
+7. **Conflict Detection**: Query existing facts to identify potential conflicts
+8. **Topic Protection Check**: Before any reorganization, identify persistent topics and NEVER modify them automatically
+9. **Execution**: Add, update, or reorganize as appropriate (respecting persistent topics as stronger organizational nodes)
+10. **Confirmation**: Confirm changes and suggest related improvements
 
 ### Topic Creation Recognition Patterns
 
@@ -267,11 +302,19 @@ Consider how users will query this information:
 
 **Default Rule: When in doubt, prefer atomic facts** (easier to update, recombine in queries)
 
-**Step 5: Confirm for Large Batches**
+**Step 5: STOP and Get Explicit Approval for Large Batches**
 If decomposing input would create >5 facts:
-1. Present your decomposition plan to user
-2. Explain rationale for granularity choice
-3. Ask: "I'm planning to add [N] facts from this information. Should I proceed with this granularity, or would you prefer a different approach?"
+1. **STOP execution immediately - DO NOT add any facts yet**
+2. Present your decomposition plan to user with:
+   - List of all [N] facts that would be created
+   - Topics that would be assigned
+   - Rationale for decomposition granularity
+3. **EXPLICITLY ASK**: "I'm planning to add [N] facts from this information. Should I proceed?"
+4. **WAIT for explicit user approval** before executing any fact additions
+5. If user approves, proceed with fact creation
+6. If user suggests different approach, revise plan and ask again
+
+**Critical**: The approval is for EXECUTION, not just granularity approach. Do not add facts without explicit user confirmation.
 
 ### Fact Granularity Examples
 
@@ -329,6 +372,17 @@ $KB_CLI add-fact "Deployment step 4: Manual approval required for production" "d
 $KB_CLI add-fact "Deployment step 5: Production deploy after approval" "deployment,production" "devops-docs"
 ```
 Use when: Users query specific steps, steps evolve independently, or troubleshooting specific stages
+
+**Decision Process**:
+This would create 5 facts (at the threshold). Since this equals the >5 limit, best practice is to present the approach:
+
+"I can add this deployment process as either:
+A) Single overview fact (recommended for simple queries)
+B) 5 separate step facts (better for troubleshooting)
+
+Should I proceed with option A, or would you prefer the detailed step-by-step approach?"
+
+Wait for user response before executing.
 
 **Default: For process descriptions, prefer single overview fact unless steps are complex or frequently change**
 
