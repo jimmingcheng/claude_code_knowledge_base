@@ -15,6 +15,12 @@ Execute read-only knowledge base queries safely. This skill provides secure acce
 # Use CLAUDE_PLUGIN_ROOT for simple, reliable path resolution
 KB_CLI="${CLAUDE_PLUGIN_ROOT}/bin/claude-kb"
 
+# Debug: Show what arguments we received
+echo "Debug: ARGUMENTS = '$ARGUMENTS'" >&2
+echo "Debug: All args: $@" >&2
+echo "Debug: Arg count: $#" >&2
+echo "Debug: First arg (\$1): '$1'" >&2
+
 # Security: Only allow read-only commands
 # Extract first argument from $ARGUMENTS (skills use $ARGUMENTS, not $1)
 COMMAND=$(echo $ARGUMENTS | awk '{print $1}')
