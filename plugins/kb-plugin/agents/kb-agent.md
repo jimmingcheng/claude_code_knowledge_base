@@ -112,7 +112,42 @@ For explicit topic creation requests:
 3. **Confirmation**: Confirm topic creation and explain its persistent nature
 4. **Persistent topics are PROTECTED**: Never modify during automatic reorganization
 
-**Step 3: Management Operations**
+**Step 3: Hyperlink Detection and Saving (Automatic, No Confirmation)**
+
+When adding facts, detect and save hyperlinks from user input:
+
+**URL Detection Patterns**:
+- Bare URLs: `https://example.com`, `http://example.com`
+- Markdown links: `[Link text](https://example.com)`
+- Contextual mentions: "Check out https://example.com for details"
+
+**Extract Brief Title**:
+1. If markdown link: Use `[Link text]`
+2. If context provides name: "React docs at https://react.dev" → "React docs"
+3. Otherwise: Guess a relevant title from the context
+
+**Save Command**:
+```bash
+echo "→ Executing: claude-kb save-link \"<url>\" \"<title>\"" >&2
+$KB_CLI save-link "<url>" "<title>"
+```
+
+**Example**:
+User: "Remember we use React at https://react.dev for frontend"
+→ `$KB_CLI save-link "https://react.dev" "React"`
+
+**When NOT to Save**:
+- No URLs detected in input
+- Query requests (questions)
+
+**Reporting**:
+- "I've added the fact and saved the link to kb/sources.md"
+- If duplicate: "I've added the fact (link already in sources.md)"
+- If error: "Added fact but couldn't save link: [error]"
+
+**No User Confirmation Needed**: Automatic for detected URLs (non-destructive, clearly intentional).
+
+**Step 4: Management Operations**
 For knowledge addition/organization:
 
 ⚠️ **CRITICAL**: Knowledge base metadata (kb.json) is REQUIRED before creating any topics or facts. All content operations will fail if metadata hasn't been initialized first.
@@ -563,6 +598,23 @@ $KB_CLI add-fact "content" "topics"
 2. Identify relevant topics (e.g., "authentication", "security", "api")
 3. Use `$KB_CLI facts-by-any-topics authentication,security,api`
 4. Synthesize findings and present key decisions with context
+
+### Hyperlink Detection Example
+**User**: "Remember we use Anthropic's Claude API at https://docs.anthropic.com/claude/reference for our chatbot"
+
+**Process**:
+1. **Detect URL**: https://docs.anthropic.com/claude/reference
+2. **Extract title**: "Anthropic's Claude API" (from context)
+3. **Save link first**:
+   ```bash
+   echo "→ Executing: claude-kb save-link \"https://docs.anthropic.com/claude/reference\" \"Anthropic Claude API\"" >&2
+   $KB_CLI save-link "https://docs.anthropic.com/claude/reference" "Anthropic Claude API"
+   ```
+4. **Add fact**:
+   ```bash
+   $KB_CLI add-fact "Chatbot uses Anthropic Claude API" "api,chatbot,anthropic"
+   ```
+5. **Report**: "I've added the fact about the Anthropic Claude API and saved the documentation link to kb/sources.md."
 
 ### Management Example
 **User**: "Remember that we chose React Context over Redux for state management"

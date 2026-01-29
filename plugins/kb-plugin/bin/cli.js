@@ -54,6 +54,7 @@ function main() {
         console.log('Content management (requires metadata initialization):');
         console.log('  add-fact <content> [topic1,topic2,...] [source1,source2,...]');
         console.log('  add-topic <name> <description> [isPersistent]');
+        console.log('  save-link <url> <title> - Save a hyperlink to kb/sources.md');
         console.log('');
         console.log('CRUD Operations:');
         console.log('  update-fact <id> <content> [topic1,topic2,...] [source1,source2,...]');
@@ -353,6 +354,41 @@ function main() {
             }
             else {
                 console.error(`Failed to update topic "${topicName}"`);
+            }
+            break;
+        }
+        case 'save-link': {
+            const url = args[1];
+            const title = args[2];
+            if (!url || !title) {
+                console.error('Please provide both URL and title');
+                console.error('Usage: claude-kb save-link <url> <title>');
+                return;
+            }
+            const path = require('path');
+            const fs = require('fs');
+            const sourcesPath = path.join(kbPath, 'sources.md');
+            try {
+                // Initialize file if doesn't exist
+                if (!fs.existsSync(sourcesPath)) {
+                    fs.writeFileSync(sourcesPath, '# Sources\n\n', 'utf-8');
+                }
+                // Read existing content
+                const content = fs.readFileSync(sourcesPath, 'utf-8');
+                // Check for duplicate (substring match)
+                if (content.includes(url)) {
+                    console.log('Link already exists (skipped)');
+                    break;
+                }
+                // Append new link
+                const today = new Date().toISOString().split('T')[0];
+                const newLine = `- [${title}](${url}) - Added ${today}\n`;
+                fs.appendFileSync(sourcesPath, newLine, 'utf-8');
+                console.log(`Saved link to kb/sources.md: ${title}`);
+            }
+            catch (error) {
+                console.error(`Failed to save link: ${error instanceof Error ? error.message : String(error)}`);
+                process.exit(1);
             }
             break;
         }
