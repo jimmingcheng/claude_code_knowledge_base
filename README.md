@@ -8,6 +8,8 @@ Traditional databases require you to define structure upfront. But human memory 
 
 This plugin creates a knowledge store that behaves similarly: as you add information, it reconfigures and absorbs it into an organizational structure that evolves over time. Just as each person's mind is shaped by their unique concerns, each knowledge base adapts to its own shape—a memory system that emerges naturally around your specific use case.
 
+LLMs make this possible. Their ability to understand context and meaning—rather than just matching keywords—allows them to categorize, reorganize, and retrieve information the way a human assistant would, without requiring rigid schemas or predefined queries.
+
 ## How It Works
 
 The knowledge base consists of **facts** and **topics**. Each fact is tagged with one or more topics. Topics help agents find facts that are relevant to user queries. Topics also give agents a mechanism to evolve the shape of the knowledge base—emphasizing important topics and facts, pruning irrelevant ones, and consolidating as needed.
