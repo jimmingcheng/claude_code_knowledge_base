@@ -534,21 +534,7 @@ Bash environment variables persist within your bash session, so you only need to
 **Step 1: Path Resolution (separate bash call)**
 
 ```bash
-# Resolve KB CLI using helper script
-KB_CLI=$(~/.claude/plugins/cache/claude-code-knowledge-base/kb-plugin/*/bin/resolve-kb-cli.sh 2>/dev/null | head -1)
-
-# Fallback to marketplace installation
-if [[ -z "$KB_CLI" ]]; then
-    KB_CLI=$(~/.claude/plugins/marketplaces/claude-code-knowledge-base/plugins/kb-plugin/bin/resolve-kb-cli.sh 2>/dev/null)
-fi
-
-# Error if resolution failed
-if [[ -z "$KB_CLI" ]]; then
-    echo "Error: Could not resolve claude-kb CLI path" >&2
-    exit 1
-fi
-
-export KB_CLI
+source ~/.claude/plugins/cache/claude-code-knowledge-base/kb-plugin/*/bin/setup-kb-env.sh
 ```
 
 **Step 2: Clean Operations (subsequent bash calls)**
