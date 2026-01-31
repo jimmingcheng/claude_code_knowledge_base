@@ -2,7 +2,13 @@
 
 A Claude Code plugin that provides an AI agent for managing a general purpose adaptive knowledge base.
 
-## Overview
+## Why
+
+Traditional databases require you to define structure upfront. But human memory doesn't work that way—it organically reorganizes around what matters most.
+
+This plugin creates a knowledge store that behaves similarly: as you add information, it reconfigures and absorbs it into an organizational structure that evolves over time. Just as each person's mind is shaped by their unique concerns, each knowledge base adapts to its own shape—a memory system that emerges naturally around your specific use case.
+
+## How It Works
 
 The knowledge base consists of **facts** and **topics**. Each fact is tagged with one or more topics. Topics help agents find facts that are relevant to user queries. Topics also give agents a mechanism to evolve the shape of the knowledge base—emphasizing important topics and facts, pruning irrelevant ones, and consolidating as needed.
 
@@ -20,7 +26,7 @@ Important topics may be marked **persistent** by the user. These topics will nev
 
 ## Installation
 
-See [Discover plugins](https://code.claude.com/docs/en/discover-plugins).
+See [Anthropic's instructions for installing Claude Code plugins](https://code.claude.com/docs/en/discover-plugins).
 
 ## Usage
 
