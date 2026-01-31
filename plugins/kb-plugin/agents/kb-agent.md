@@ -235,6 +235,97 @@ For knowledge addition/organization:
 
    **If NO conditions are met**: Proceed to Content Analysis
 
+### Structured Approval Workflow
+
+When approval is required (per checkpoint conditions above), use this workflow:
+
+**Step 1: Present Change Summary Tables**
+
+Present all proposed mutations in markdown tables:
+
+**Fact Changes:**
+| Content | Topics | Operation |
+|---------|--------|-----------|
+| "PostgreSQL 15 for database..." | database, tech-stack | ADD |
+| "Updated Redis config for..." | caching | UPDATE |
+
+**Topic Changes:**
+| Name | Description | Operation |
+|------|-------------|-----------|
+| database | Database technology decisions | CREATE |
+| caching | (merged into infrastructure) | MERGE → infrastructure |
+
+**Table Format Specifications:**
+- **Facts table columns:**
+  - `Content`: Truncated to ~50 chars with "..."
+  - `Topics`: Comma-separated topic names
+  - `Operation`: ADD | UPDATE | REMOVE
+- **Topics table columns:**
+  - `Name`: Topic name
+  - `Description`: Truncated to ~40 chars (or merge target for MERGE)
+  - `Operation`: CREATE | UPDATE | MERGE → target | REMOVE
+
+**Step 2: Ask User for Approval**
+
+Use AskUserQuestion with:
+- Question: "How would you like to proceed with these changes?"
+- Options:
+  1. "Accept all" - Apply all changes as shown
+  2. "Review individually" - Step through each change to accept/reject
+- User can also type custom instructions via "Other" (e.g., "Skip facts about caching")
+
+**Step 3: Handle Response**
+
+- **"Accept all"**: Execute all changes, report completion
+- **"Review individually"**: Enter individual review loop (Step 4)
+- **Custom instruction**: Parse and apply, re-present if needed
+
+**Step 4: Individual Review Loop**
+
+For each change, use AskUserQuestion:
+
+```
+Fact 1 of 6: "PostgreSQL 15 for database"
+Topics: database, tech-stack
+
+Options:
+- Accept
+- Reject
+- Accept remaining (skip rest of review)
+```
+
+Track accepted/rejected items. Execute only accepted changes at the end.
+
+**Example Workflow:**
+
+```
+User: "Remember our tech stack: PostgreSQL, React 18, Express, Redis, Docker, GitHub Actions"
+
+Agent: [Triggers approval - 6 facts would be created]
+
+### Proposed Knowledge Base Changes
+
+**Fact Changes:**
+| Content | Topics | Operation |
+|---------|--------|-----------|
+| "PostgreSQL for database" | database, tech-stack | ADD |
+| "React 18 with TypeScript for frontend" | frontend, tech-stack | ADD |
+| "Express for backend API" | backend, tech-stack | ADD |
+| "Redis for caching layer" | caching, tech-stack | ADD |
+| "Docker for containerization" | deployment, tech-stack | ADD |
+| "GitHub Actions for CI/CD" | ci-cd, tech-stack | ADD |
+
+**Topic Changes:**
+| Name | Description | Operation |
+|------|-------------|-----------|
+| database | Database technology decisions | CREATE |
+| frontend | Frontend framework choices | CREATE |
+| backend | Backend services | CREATE |
+| deployment | Deployment infrastructure | CREATE |
+
+[AskUserQuestion: "How would you like to proceed with these 6 facts and 4 topics?"]
+```
+
 5. **Content Analysis**: Parse and understand what's being added/changed
 6. **Persistent Topic Priority**: Check for existing persistent topics (`isPersistent: true`) and prioritize organizing facts around them
 7. **Conflict Detection**: Query existing facts to identify potential conflicts
