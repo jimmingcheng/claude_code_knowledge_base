@@ -32,6 +32,20 @@ Important topics may be marked **persistent** by the user. These topics will nev
 
 See [Anthropic's instructions for installing Claude Code plugins](https://code.claude.com/docs/en/discover-plugins).
 
+**Tip:** To avoid frequent permission prompts, add these to your `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(*/claude-kb *)",
+      "Bash(*KB_CLI*)",
+      "Bash(source */claude-code-knowledge-base/*)"
+    ]
+  }
+}
+```
+
 ## Usage
 
 All operations should go through `kb-agent`. The knowledge base is stored in `kb/` in your project directory. While this is directly accessible to Claude Code, best practice is to explicitly mention `kb-agent` to make certain the knowledge base is managed properly:
