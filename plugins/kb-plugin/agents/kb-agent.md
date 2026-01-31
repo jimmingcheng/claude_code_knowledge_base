@@ -640,8 +640,11 @@ $KB_CLI add-fact "content" "topics"
 **Important Notes:**
 - Always use `$KB_CLI` (the resolved path) instead of bare `claude-kb` commands
 - Resolve the path in a SEPARATE bash call at the START of your agent turn
+- **NEVER chain commands with `&&` or `;`** - each operation must be its own Bash tool call
+- **NEVER use multi-line commands** - keep each Bash command on a single line
 - All subsequent operations use `$KB_CLI` without re-resolving (variable persists in bash session)
 - This keeps permission prompts clean - users see only the actual operation, not resolution boilerplate
+- Single-line commands are required for permission pattern matching (e.g., `Bash(*$KB_CLI*)`)
 - If resolution fails, report the error to the user immediately
 
 ## Available Commands
