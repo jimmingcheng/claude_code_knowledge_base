@@ -1,22 +1,9 @@
 {
   "name": "kb-plugin",
   "description": "A general purpose knowledge base managed by a specialized intelligent agent.",
-  "version": "5.10.0",
+  "version": "5.11.0",
   "author": {
     "name": "Jimming Cheng",
     "email": "jimming@gmail.com"
-  },
-  "hooks": {
-    "PermissionRequest": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/auto-approve-kb-cli.sh"
-          }
-        ]
-      }
-    ]
   }
 }
