@@ -124,7 +124,7 @@ When user requests KB reorganization:
 
 ## Approval Workflow
 
-When approval is required, present changes in tables:
+When approval is required, present changes in tables, then **invoke the AskUserQuestion tool** to get explicit approval before proceeding.
 
 **Fact Changes:**
 | Content | Topics | Operation |
@@ -136,27 +136,33 @@ When approval is required, present changes in tables:
 |------|-------------|-----------|
 | database | Database technology decisions | CREATE |
 
-Then use AskUserQuestion with options:
-- "Accept all" - Apply all changes
-- "Review individually" - Step through each change
+**Then invoke AskUserQuestion tool with these parameters:**
+- question: "How would you like to proceed with these changes?"
+- header: "Approval"
+- options:
+  - label: "Accept all", description: "Apply all proposed changes"
+  - label: "Review individually", description: "Step through each change one by one"
 
-Execute only after explicit approval.
+**CRITICAL**: You MUST actually call the AskUserQuestion tool - do not just describe the options in text. Wait for the tool response before executing any changes.
 
 ## Conflict Handling
 
-When new information contradicts existing facts:
+When new information contradicts existing facts, present the conflict and **invoke the AskUserQuestion tool**:
 
 ```
 I found a conflict:
 
 Existing: [fact content] (topics: [topics])
 New: [new information]
-
-Should I:
-1. Replace the old fact (information changed)
-2. Keep both (different contexts)
-3. Discard new information (existing is correct)
 ```
+
+**Then invoke AskUserQuestion tool with these parameters:**
+- question: "How should I resolve this conflict?"
+- header: "Conflict"
+- options:
+  - label: "Replace", description: "Remove old fact and add new information"
+  - label: "Keep both", description: "Store both facts (different contexts)"
+  - label: "Discard new", description: "Keep existing fact, ignore new information"
 
 ## Examples
 
@@ -186,7 +192,12 @@ Should I:
 **User**: "Remember we use PostgreSQL for the database"
 **KB Description**: "Frontend development practices"
 
-Response: "This KB is focused on frontend development. PostgreSQL is backend/infrastructure. Would you like me to add it anyway, or create a separate KB for backend decisions?"
+Present the scope issue, then invoke AskUserQuestion tool:
+- question: "This KB is focused on frontend development. PostgreSQL is backend/infrastructure. What would you like to do?"
+- header: "Scope"
+- options:
+  - label: "Add anyway", description: "Add the fact even though it's out of scope"
+  - label: "Skip", description: "Don't add this fact"
 
 ### Batch Addition (Requires Approval)
 **User**: "Remember our tech stack: PostgreSQL, React, Express, Redis, Docker, GitHub Actions"
@@ -200,6 +211,11 @@ This would create 6 facts, so present plan first:
 | "React for frontend" | frontend, tech-stack | ADD |
 | ... | ... | ... |
 
-[AskUserQuestion: "How would you like to proceed with these 6 facts?"]
+**Then invoke AskUserQuestion tool:**
+- question: "I'll add 6 facts about your tech stack. How would you like to proceed?"
+- header: "Batch add"
+- options:
+  - label: "Accept all", description: "Add all 6 facts as shown"
+  - label: "Review individually", description: "Step through each fact one by one"
 
-Wait for approval before executing.
+Wait for the tool response, then execute only after user selects an option.
