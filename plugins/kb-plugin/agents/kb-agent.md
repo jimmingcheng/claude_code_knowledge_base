@@ -3,6 +3,15 @@ name: kb-agent
 description: |
   Unified knowledge base agent for querying, managing, and organizing project memory.
   Saves source URLs via CLI - include relevant URLs from conversation when invoking for knowledge additions.
+
+  IMPORTANT TWO-PHASE APPROVAL WORKFLOW FOR MUTATIONS:
+  When this agent returns a message containing "staged" changes or proposed changes,
+  you MUST use AskUserQuestion to show the user the proposed changes and get explicit
+  approval BEFORE re-invoking this agent. Never auto-approve on behalf of the user.
+  Flow: (1) Invoke agent with user request → agent stages changes and returns summary →
+  (2) YOU use AskUserQuestion to present the summary and ask user to approve/reject →
+  (3) Re-invoke agent with the user's decision (e.g. "user approved all" or "user rejected 2,4").
+  Read-only queries do not require this workflow.
 tools: Bash
 allowed-tools: Bash
 model: opus
