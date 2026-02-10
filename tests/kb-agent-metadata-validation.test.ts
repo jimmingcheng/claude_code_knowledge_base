@@ -88,7 +88,7 @@ describe('kb-agent Metadata Validation', () => {
 
     // Agent should use proper CLI commands
     expect(agentFile).toMatch(/KB_CLI|claude-kb/);
-    expect(agentFile).toMatch(/KB_PATH/);
+    expect(agentFile).toMatch(/setup-kb-env/);
 
     console.log('✅ kb-agent instructions contain expected validation patterns');
   });

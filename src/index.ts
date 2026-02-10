@@ -5,6 +5,26 @@ export { Fact, Source } from './Fact';
 export { KnowledgeBase } from './KnowledgeBase';
 export { KnowledgeBaseMetadata } from './KnowledgeBaseMetadata';
 
+// Staged changes types
+export type {
+  StagedChangeOperation,
+  StagingReason,
+  ConflictContext,
+  StagedChange,
+  StagedChangesFile,
+  OperationParams,
+  AddFactParams,
+  UpdateFactParams,
+  RemoveFactParams,
+  AddTopicParams,
+  UpdateTopicParams,
+  RemoveTopicParams,
+  MergeTopicsParams,
+  RenameTopicParams,
+  SetTopicPersistenceParams,
+  SaveLinkParams,
+} from './StagedChange';
+
 // Re-export types for convenience
 export type { Source as SourceType } from './Fact';
 
@@ -12,7 +32,7 @@ export type { Source as SourceType } from './Fact';
 import { KnowledgeBase } from './KnowledgeBase';
 
 // Version information
-export const VERSION = '1.3.0';
+export const VERSION = '1.4.0';
 
 // Utility function to create a new knowledge base with initialization
 export function createKnowledgeBase(kbPath: string): KnowledgeBase {

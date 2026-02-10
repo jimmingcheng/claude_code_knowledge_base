@@ -1,6 +1,41 @@
 #!/usr/bin/env node
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const index_1 = require("./index");
 const kbPath = process.env.KB_PATH || './kb';
 // Helper function to parse and validate comma-separated topic names
@@ -66,6 +101,15 @@ function main() {
         console.log('  merge-topics <source> <target> - Merge source topic into target');
         console.log('  rename-topic <old> <new>       - Rename a topic');
         console.log('  set-topic-persistence <name> <true|false> - Change topic persistence status');
+        console.log('');
+        console.log('Staged Changes:');
+        console.log("  stage-changes '<json>'         - Write staged changes from JSON input");
+        console.log('  list-staged                    - Output current staged changes as JSON');
+        console.log('  apply-staged all               - Apply all staged changes');
+        console.log('  apply-staged <id1,id2,...>      - Apply selected staged changes');
+        console.log('  reject-staged all              - Reject all staged changes');
+        console.log('  reject-staged <id1,id2,...>     - Reject selected staged changes');
+        console.log('  clear-staged                   - Clear all staged changes (alias for reject-staged all)');
         return;
     }
     const kb = (0, index_1.createKnowledgeBase)(kbPath);
@@ -365,8 +409,6 @@ function main() {
                 console.error('Usage: claude-kb save-link <url> <title>');
                 return;
             }
-            const path = require('path');
-            const fs = require('fs');
             const sourcesPath = path.join(kbPath, 'sources.md');
             try {
                 // Initialize file if doesn't exist
@@ -389,6 +431,189 @@ function main() {
             catch (error) {
                 console.error(`Failed to save link: ${error instanceof Error ? error.message : String(error)}`);
                 process.exit(1);
+            }
+            break;
+        }
+        // Staged Changes Commands
+        case 'stage-changes': {
+            const jsonInput = args[1];
+            if (!jsonInput) {
+                console.error('Please provide staged changes JSON');
+                console.error("Usage: claude-kb stage-changes '<json>'");
+                process.exit(1);
+            }
+            let staged;
+            try {
+                staged = JSON.parse(jsonInput);
+            }
+            catch (error) {
+                console.error('Invalid JSON input:', error instanceof Error ? error.message : String(error));
+                process.exit(1);
+                return; // TypeScript flow
+            }
+            if (!staged.stagedAt || !staged.summary || !Array.isArray(staged.changes)) {
+                console.error('Invalid staged changes format: must have stagedAt, summary, and changes array');
+                process.exit(1);
+            }
+            kb.saveStagedChanges(staged);
+            console.log(`Staged ${staged.changes.length} change(s)`);
+            console.log(`Summary: ${staged.summary}`);
+            break;
+        }
+        case 'list-staged': {
+            const staged = kb.loadStagedChanges();
+            if (!staged) {
+                console.log('No staged changes');
+                break;
+            }
+            console.log(JSON.stringify(staged, null, 2));
+            break;
+        }
+        case 'apply-staged': {
+            const staged = kb.loadStagedChanges();
+            if (!staged) {
+                console.error('No staged changes to apply');
+                process.exit(1);
+            }
+            const selector = args[1];
+            if (!selector) {
+                console.error('Please specify "all" or comma-separated IDs');
+                console.error('Usage: claude-kb apply-staged all');
+                console.error('       claude-kb apply-staged 1,2,3');
+                process.exit(1);
+            }
+            if (selector === 'all') {
+                // Apply all changes
+                const results = [];
+                for (const change of staged.changes) {
+                    // Handle save-link at CLI level
+                    if (change.operation === 'save-link') {
+                        const p = change.params;
+                        const sourcesPath = path.join(kbPath, 'sources.md');
+                        try {
+                            if (!fs.existsSync(sourcesPath)) {
+                                fs.writeFileSync(sourcesPath, '# Sources\n\n', 'utf-8');
+                            }
+                            const content = fs.readFileSync(sourcesPath, 'utf-8');
+                            if (content.includes(p.url)) {
+                                results.push(`Link already exists (skipped): ${p.url}`);
+                            }
+                            else {
+                                const today = new Date().toISOString().split('T')[0];
+                                const newLine = `- [${p.title}](${p.url}) - Added ${today}\n`;
+                                fs.appendFileSync(sourcesPath, newLine, 'utf-8');
+                                results.push(`Saved link: ${p.title}`);
+                            }
+                        }
+                        catch (error) {
+                            results.push(`ERROR saving link: ${error instanceof Error ? error.message : String(error)}`);
+                        }
+                    }
+                    else {
+                        results.push(kb.applyStagedChange(change));
+                    }
+                }
+                kb.clearStagedChanges();
+                console.log(`Applied ${staged.changes.length} change(s):`);
+                results.forEach(r => console.log(`  ${r}`));
+            }
+            else {
+                // Apply selected changes by ID
+                const ids = selector.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                if (ids.length === 0) {
+                    console.error('Please provide valid change IDs');
+                    process.exit(1);
+                }
+                const toApply = staged.changes.filter(c => ids.includes(c.id));
+                const remaining = staged.changes.filter(c => !ids.includes(c.id));
+                if (toApply.length === 0) {
+                    console.error(`No staged changes found with IDs: ${ids.join(', ')}`);
+                    process.exit(1);
+                }
+                const results = [];
+                for (const change of toApply) {
+                    if (change.operation === 'save-link') {
+                        const p = change.params;
+                        const sourcesPath = path.join(kbPath, 'sources.md');
+                        try {
+                            if (!fs.existsSync(sourcesPath)) {
+                                fs.writeFileSync(sourcesPath, '# Sources\n\n', 'utf-8');
+                            }
+                            const content = fs.readFileSync(sourcesPath, 'utf-8');
+                            if (content.includes(p.url)) {
+                                results.push(`Link already exists (skipped): ${p.url}`);
+                            }
+                            else {
+                                const today = new Date().toISOString().split('T')[0];
+                                const newLine = `- [${p.title}](${p.url}) - Added ${today}\n`;
+                                fs.appendFileSync(sourcesPath, newLine, 'utf-8');
+                                results.push(`Saved link: ${p.title}`);
+                            }
+                        }
+                        catch (error) {
+                            results.push(`ERROR saving link: ${error instanceof Error ? error.message : String(error)}`);
+                        }
+                    }
+                    else {
+                        results.push(kb.applyStagedChange(change));
+                    }
+                }
+                if (remaining.length > 0) {
+                    kb.saveStagedChanges({
+                        ...staged,
+                        changes: remaining,
+                    });
+                    console.log(`Applied ${toApply.length} change(s), ${remaining.length} remaining:`);
+                }
+                else {
+                    kb.clearStagedChanges();
+                    console.log(`Applied ${toApply.length} change(s):`);
+                }
+                results.forEach(r => console.log(`  ${r}`));
+            }
+            break;
+        }
+        case 'reject-staged':
+        case 'clear-staged': {
+            const staged = kb.loadStagedChanges();
+            if (!staged) {
+                console.log('No staged changes to clear');
+                break;
+            }
+            const selector = command === 'clear-staged' ? 'all' : args[1];
+            if (!selector) {
+                console.error('Please specify "all" or comma-separated IDs');
+                console.error('Usage: claude-kb reject-staged all');
+                console.error('       claude-kb reject-staged 1,2,3');
+                process.exit(1);
+            }
+            if (selector === 'all') {
+                kb.clearStagedChanges();
+                console.log(`Rejected ${staged.changes.length} staged change(s)`);
+            }
+            else {
+                const ids = selector.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                if (ids.length === 0) {
+                    console.error('Please provide valid change IDs');
+                    process.exit(1);
+                }
+                const toReject = staged.changes.filter(c => ids.includes(c.id));
+                const remaining = staged.changes.filter(c => !ids.includes(c.id));
+                if (toReject.length === 0) {
+                    console.error(`No staged changes found with IDs: ${ids.join(', ')}`);
+                    process.exit(1);
+                }
+                if (remaining.length > 0) {
+                    kb.saveStagedChanges({
+                        ...staged,
+                        changes: remaining,
+                    });
+                    console.log(`Rejected ${toReject.length} change(s), ${remaining.length} remaining`);
+                }
+                else {
+                    kb.clearStagedChanges();
+                    console.log(`Rejected ${toReject.length} change(s)`);
+                }
             }
             break;
         }

@@ -3,6 +3,7 @@ import * as path from 'path';
 import { Topic } from './Topic';
 import { Fact, Source } from './Fact';
 import { KnowledgeBaseMetadata } from './KnowledgeBaseMetadata';
+import { StagedChange, StagedChangesFile } from './StagedChange';
 
 /**
  * Main knowledge base class that manages topics and facts.
@@ -513,6 +514,150 @@ export class KnowledgeBase {
       return true;
     }
     return false;
+  }
+
+  // --- Staged Changes Methods ---
+
+  /**
+   * Returns the path to the staged-changes.json file.
+   */
+  getStagedChangesPath(): string {
+    return path.join(this.kbPath, 'staged-changes.json');
+  }
+
+  /**
+   * Loads staged changes from disk. Returns null if no staged changes file exists.
+   */
+  loadStagedChanges(): StagedChangesFile | null {
+    const filePath = this.getStagedChangesPath();
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(content) as StagedChangesFile;
+    } catch (error) {
+      console.warn('Could not parse staged-changes.json:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Writes staged changes to disk.
+   */
+  saveStagedChanges(staged: StagedChangesFile): void {
+    const filePath = this.getStagedChangesPath();
+    fs.writeFileSync(filePath, JSON.stringify(staged, null, 2), 'utf-8');
+  }
+
+  /**
+   * Deletes the staged changes file. Returns true if the file existed and was deleted.
+   */
+  clearStagedChanges(): boolean {
+    const filePath = this.getStagedChangesPath();
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Applies a single staged change by dispatching to the appropriate CRUD method.
+   * Returns a human-readable result message.
+   */
+  applyStagedChange(change: StagedChange): string {
+    const params = change.params as Record<string, any>;
+
+    switch (change.operation) {
+      case 'add-fact': {
+        const fact = this.createFact(
+          params.content,
+          new Set(params.topics || []),
+          new Set(params.sources || [])
+        );
+        return `Added fact #${fact.id}: "${params.content.substring(0, 60)}..."`;
+      }
+
+      case 'update-fact': {
+        const updated = this.updateFact(
+          params.id,
+          params.content,
+          new Set(params.topics || []),
+          new Set(params.sources || [])
+        );
+        if (updated) {
+          return `Updated fact #${params.id}`;
+        }
+        return `ERROR: Fact #${params.id} not found`;
+      }
+
+      case 'remove-fact': {
+        const removed = this.removeFactById(params.id);
+        if (removed) {
+          return `Removed fact #${params.id}`;
+        }
+        return `ERROR: Fact #${params.id} not found`;
+      }
+
+      case 'add-topic': {
+        const topic = this.createTopic(
+          params.name,
+          params.description || '',
+          params.isPersistent ?? false
+        );
+        return `Added topic "${topic.name}"${topic.isPersistent ? ' [persistent]' : ''}`;
+      }
+
+      case 'update-topic': {
+        const updated = this.updateTopic(params.name, params.description);
+        if (updated) {
+          return `Updated topic "${params.name}"`;
+        }
+        return `ERROR: Topic "${params.name}" not found`;
+      }
+
+      case 'remove-topic': {
+        const removed = this.removeTopicByName(params.name);
+        if (removed) {
+          return `Removed topic "${params.name}"`;
+        }
+        return `ERROR: Topic "${params.name}" not found`;
+      }
+
+      case 'merge-topics': {
+        const merged = this.mergeTopics(params.source, params.target);
+        if (merged) {
+          return `Merged topic "${params.source}" into "${params.target}"`;
+        }
+        return `ERROR: Could not merge "${params.source}" into "${params.target}"`;
+      }
+
+      case 'rename-topic': {
+        const renamed = this.renameTopic(params.oldName, params.newName);
+        if (renamed) {
+          return `Renamed topic "${params.oldName}" to "${params.newName}"`;
+        }
+        return `ERROR: Could not rename "${params.oldName}" to "${params.newName}"`;
+      }
+
+      case 'set-topic-persistence': {
+        const success = this.setTopicPersistence(params.name, params.isPersistent);
+        if (success) {
+          const status = params.isPersistent ? 'persistent' : 'non-persistent';
+          return `Set topic "${params.name}" to ${status}`;
+        }
+        return `ERROR: Topic "${params.name}" not found`;
+      }
+
+      case 'save-link': {
+        // save-link writes to sources.md - handled at CLI level
+        return `SAVE_LINK:${params.url}:${params.title}`;
+      }
+
+      default:
+        return `ERROR: Unknown operation "${change.operation}"`;
+    }
   }
 
   /**

@@ -14,7 +14,7 @@ Object.defineProperty(exports, "KnowledgeBaseMetadata", { enumerable: true, get:
 // Import for internal use
 const KnowledgeBase_2 = require("./KnowledgeBase");
 // Version information
-exports.VERSION = '1.3.0';
+exports.VERSION = '1.4.0';
 // Utility function to create a new knowledge base with initialization
 function createKnowledgeBase(kbPath) {
     KnowledgeBase_2.KnowledgeBase.initializeKnowledgeBase(kbPath);

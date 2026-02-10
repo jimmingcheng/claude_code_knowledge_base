@@ -1,6 +1,7 @@
 import { Topic } from './Topic';
 import { Fact, Source } from './Fact';
 import { KnowledgeBaseMetadata } from './KnowledgeBaseMetadata';
+import { StagedChange, StagedChangesFile } from './StagedChange';
 /**
  * Main knowledge base class that manages topics and facts.
  * Loads data from JSON files and provides methods for querying and updating the knowledge base.
@@ -156,6 +157,27 @@ export declare class KnowledgeBase {
      * Returns true if successful, false if topic doesn't exist.
      */
     setTopicPersistence(topicName: string, isPersistent: boolean): boolean;
+    /**
+     * Returns the path to the staged-changes.json file.
+     */
+    getStagedChangesPath(): string;
+    /**
+     * Loads staged changes from disk. Returns null if no staged changes file exists.
+     */
+    loadStagedChanges(): StagedChangesFile | null;
+    /**
+     * Writes staged changes to disk.
+     */
+    saveStagedChanges(staged: StagedChangesFile): void;
+    /**
+     * Deletes the staged changes file. Returns true if the file existed and was deleted.
+     */
+    clearStagedChanges(): boolean;
+    /**
+     * Applies a single staged change by dispatching to the appropriate CRUD method.
+     * Returns a human-readable result message.
+     */
+    applyStagedChange(change: StagedChange): string;
     /**
      * Returns statistics about the knowledge base.
      */
