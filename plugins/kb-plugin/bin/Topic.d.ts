@@ -6,7 +6,8 @@ export declare class Topic {
     readonly name: string;
     readonly description: string;
     readonly isPersistent: boolean;
-    constructor(name: string, description: string, isPersistent?: boolean);
+    readonly addedAt: string;
+    constructor(name: string, description: string, isPersistent?: boolean, addedAt?: string);
     /**
      * Creates a Topic instance from a plain object (e.g., from JSON data).
      * Provides backward compatibility for data without isPersistent field and old isInferred field.
@@ -17,6 +18,7 @@ export declare class Topic {
         description: string;
         isPersistent?: boolean;
         isInferred?: boolean;
+        addedAt?: string;
     }): Topic;
     /**
      * Converts the Topic instance to a plain object for serialization.
@@ -25,6 +27,7 @@ export declare class Topic {
         name: string;
         description: string;
         isPersistent: boolean;
+        addedAt: string;
     };
     /**
      * Returns a string representation of the topic.

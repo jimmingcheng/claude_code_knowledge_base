@@ -6,11 +6,12 @@ exports.Fact = void 0;
  * Facts contain content, are categorized by topics, and reference sources by ID.
  */
 class Fact {
-    constructor(id, content, topics, sourceIds) {
+    constructor(id, content, topics, sourceIds, addedAt) {
         this.id = id;
         this.content = content;
         this.topics = new Set(topics); // Create a copy to ensure immutability
         this.sourceIds = new Set(sourceIds); // Create a copy to ensure immutability
+        this.addedAt = addedAt ?? new Date().toISOString().split('T')[0];
     }
     /**
      * Creates a Fact instance from a plain object (e.g., from JSON data).
@@ -21,7 +22,7 @@ class Fact {
         const topics = new Set(obj.topics);
         // Use sourceIds if present; if old-format sources field, leave empty (migration in KnowledgeBase)
         const sourceIds = new Set(obj.sourceIds ?? []);
-        return new Fact(obj.id, obj.content, topics, sourceIds);
+        return new Fact(obj.id, obj.content, topics, sourceIds, obj.addedAt);
     }
     /**
      * Converts the Fact instance to a plain object for serialization.
@@ -32,6 +33,7 @@ class Fact {
             content: this.content,
             topics: Array.from(this.topics),
             sourceIds: Array.from(this.sourceIds),
+            addedAt: this.addedAt,
         };
     }
     /**

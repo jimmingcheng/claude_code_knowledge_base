@@ -6,11 +6,13 @@ export class Topic {
   public readonly name: string;
   public readonly description: string;
   public readonly isPersistent: boolean; // True if user-created (persistent), false if auto-created
+  public readonly addedAt: string;
 
-  constructor(name: string, description: string, isPersistent: boolean = false) {
+  constructor(name: string, description: string, isPersistent: boolean = false, addedAt?: string) {
     this.name = name;
     this.description = description;
     this.isPersistent = isPersistent;
+    this.addedAt = addedAt ?? new Date().toISOString().split('T')[0];
   }
 
   /**
@@ -23,6 +25,7 @@ export class Topic {
     description: string;
     isPersistent?: boolean;
     isInferred?: boolean; // Backward compatibility
+    addedAt?: string;
   }): Topic {
     // Handle backward compatibility: use 'name' if available, otherwise fall back to 'id'
     const topicName = obj.name ?? obj.id;
@@ -35,7 +38,7 @@ export class Topic {
     if (obj.isInferred !== undefined && obj.isPersistent === undefined) {
       isPersistent = !obj.isInferred; // Invert for backward compatibility
     }
-    return new Topic(topicName, obj.description, isPersistent);
+    return new Topic(topicName, obj.description, isPersistent, obj.addedAt);
   }
 
   /**
@@ -45,11 +48,13 @@ export class Topic {
     name: string;
     description: string;
     isPersistent: boolean;
+    addedAt: string;
   } {
     return {
       name: this.name,
       description: this.description,
       isPersistent: this.isPersistent,
+      addedAt: this.addedAt,
     };
   }
 

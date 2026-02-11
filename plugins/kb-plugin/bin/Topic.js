@@ -6,10 +6,11 @@ exports.Topic = void 0;
  * Topics are used to categorize and organize facts.
  */
 class Topic {
-    constructor(name, description, isPersistent = false) {
+    constructor(name, description, isPersistent = false, addedAt) {
         this.name = name;
         this.description = description;
         this.isPersistent = isPersistent;
+        this.addedAt = addedAt ?? new Date().toISOString().split('T')[0];
     }
     /**
      * Creates a Topic instance from a plain object (e.g., from JSON data).
@@ -26,7 +27,7 @@ class Topic {
         if (obj.isInferred !== undefined && obj.isPersistent === undefined) {
             isPersistent = !obj.isInferred; // Invert for backward compatibility
         }
-        return new Topic(topicName, obj.description, isPersistent);
+        return new Topic(topicName, obj.description, isPersistent, obj.addedAt);
     }
     /**
      * Converts the Topic instance to a plain object for serialization.
@@ -36,6 +37,7 @@ class Topic {
             name: this.name,
             description: this.description,
             isPersistent: this.isPersistent,
+            addedAt: this.addedAt,
         };
     }
     /**

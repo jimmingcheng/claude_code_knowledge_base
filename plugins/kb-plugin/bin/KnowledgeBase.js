@@ -156,7 +156,7 @@ class KnowledgeBase {
                         newSourceIds.push(source.id);
                     }
                     // Update the in-memory fact
-                    this.facts[i] = new Fact_1.Fact(this.facts[i].id, this.facts[i].content, this.facts[i].topics, new Set(newSourceIds));
+                    this.facts[i] = new Fact_1.Fact(this.facts[i].id, this.facts[i].content, this.facts[i].topics, new Set(newSourceIds), this.facts[i].addedAt);
                     migrated = true;
                 }
             }
@@ -535,7 +535,8 @@ class KnowledgeBase {
             for (const topicName of topicNames) {
                 this.createTopic(topicName, `Information about ${topicName}`, false);
             }
-            const updatedFact = new Fact_1.Fact(id, content, topicNames, sourceIds);
+            const existingFact = this.facts[existingIndex];
+            const updatedFact = new Fact_1.Fact(id, content, topicNames, sourceIds, existingFact.addedAt);
             this.facts[existingIndex] = updatedFact;
             this.saveFacts();
             return updatedFact;
@@ -549,8 +550,8 @@ class KnowledgeBase {
         const existingIndex = this.topics.findIndex(t => t.name === name);
         if (existingIndex >= 0) {
             const existingTopic = this.topics[existingIndex];
-            // Preserve the isPersistent value from the existing topic
-            const updatedTopic = new Topic_1.Topic(name, newDescription, existingTopic.isPersistent);
+            // Preserve the isPersistent value and addedAt from the existing topic
+            const updatedTopic = new Topic_1.Topic(name, newDescription, existingTopic.isPersistent, existingTopic.addedAt);
             this.topics[existingIndex] = updatedTopic;
             this.saveTopics();
             return updatedTopic;
@@ -582,7 +583,7 @@ class KnowledgeBase {
                     }
                 }
                 // Update the fact with new topics
-                this.facts[index] = new Fact_1.Fact(fact.id, fact.content, newTopics, fact.sourceIds);
+                this.facts[index] = new Fact_1.Fact(fact.id, fact.content, newTopics, fact.sourceIds, fact.addedAt);
                 factsUpdated++;
             }
         });
@@ -604,8 +605,8 @@ class KnowledgeBase {
         if (!oldTopic || existingNewTopic) {
             return false;
         }
-        // Create new topic with the new name, same description, and preserve isPersistent value
-        const newTopic = new Topic_1.Topic(newName, oldTopic.description, oldTopic.isPersistent);
+        // Create new topic with the new name, same description, and preserve isPersistent value and addedAt
+        const newTopic = new Topic_1.Topic(newName, oldTopic.description, oldTopic.isPersistent, oldTopic.addedAt);
         this.upsertTopic(newTopic);
         // Update all facts that reference the old topic
         let factsUpdated = 0;
@@ -622,7 +623,7 @@ class KnowledgeBase {
                     }
                 }
                 // Update the fact with new topics
-                this.facts[index] = new Fact_1.Fact(fact.id, fact.content, newTopics, fact.sourceIds);
+                this.facts[index] = new Fact_1.Fact(fact.id, fact.content, newTopics, fact.sourceIds, fact.addedAt);
                 factsUpdated++;
             }
         });
@@ -643,7 +644,7 @@ class KnowledgeBase {
         if (existingIndex >= 0) {
             const existingTopic = this.topics[existingIndex];
             // Create new topic with updated persistence status, preserving other properties
-            const updatedTopic = new Topic_1.Topic(existingTopic.name, existingTopic.description, isPersistent);
+            const updatedTopic = new Topic_1.Topic(existingTopic.name, existingTopic.description, isPersistent, existingTopic.addedAt);
             this.topics[existingIndex] = updatedTopic;
             this.saveTopics();
             return true;

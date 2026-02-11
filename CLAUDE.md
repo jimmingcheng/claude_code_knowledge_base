@@ -23,6 +23,15 @@
 3. If version bumped, mention it in commit message
 4. Follow project's commit message conventions
 
+### Deploy
+
+When the user says "deploy", this means:
+1. Bump the version in `plugins/kb-plugin/.claude-plugin/plugin.json`
+2. Commit all changes
+3. Push to `origin main`
+
+This publishes the latest version so users who have installed this plugin from the Claude Code plugin marketplace can pull the update.
+
 ### Project Structure
 
 - `plugins/kb-plugin/` - Main plugin code

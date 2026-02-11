@@ -9,17 +9,20 @@ export class Fact {
   public readonly content: string;
   public readonly topics: Set<string>;
   public readonly sourceIds: Set<number>;
+  public readonly addedAt: string;
 
   constructor(
     id: number,
     content: string,
     topics: Set<string>,
-    sourceIds: Set<number>
+    sourceIds: Set<number>,
+    addedAt?: string
   ) {
     this.id = id;
     this.content = content;
     this.topics = new Set(topics); // Create a copy to ensure immutability
     this.sourceIds = new Set(sourceIds); // Create a copy to ensure immutability
+    this.addedAt = addedAt ?? new Date().toISOString().split('T')[0];
   }
 
   /**
@@ -33,12 +36,13 @@ export class Fact {
     topics: string[];
     sourceIds?: number[];
     sources?: string[]; // backward compat
+    addedAt?: string;
   }): Fact {
     const topics = new Set(obj.topics);
     // Use sourceIds if present; if old-format sources field, leave empty (migration in KnowledgeBase)
     const sourceIds = new Set(obj.sourceIds ?? []);
 
-    return new Fact(obj.id, obj.content, topics, sourceIds);
+    return new Fact(obj.id, obj.content, topics, sourceIds, obj.addedAt);
   }
 
   /**
@@ -49,12 +53,14 @@ export class Fact {
     content: string;
     topics: string[];
     sourceIds: number[];
+    addedAt: string;
   } {
     return {
       id: this.id,
       content: this.content,
       topics: Array.from(this.topics),
       sourceIds: Array.from(this.sourceIds),
+      addedAt: this.addedAt,
     };
   }
 

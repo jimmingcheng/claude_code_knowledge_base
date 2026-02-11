@@ -66,6 +66,7 @@ describe('File Persistence', () => {
     expect(data[0]).toHaveProperty('name', 'test-topic');
     expect(data[0]).toHaveProperty('description', 'Test topic description');
     expect(data[0]).toHaveProperty('isPersistent', true);
+    expect(data[0]).toHaveProperty('addedAt');
   });
 
   test('facts.json structure is correct', () => {
@@ -85,6 +86,7 @@ describe('File Persistence', () => {
     expect(data[0]).toHaveProperty('content', 'Fact content');
     expect(data[0].topics).toEqual(['topic1', 'topic2']);
     expect(data[0].sourceIds).toEqual([source.id]);
+    expect(data[0]).toHaveProperty('addedAt');
 
     // Verify sources.json was also created
     const sourcesJsonPath = path.join(testDir, 'sources.json');

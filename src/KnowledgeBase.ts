@@ -152,7 +152,8 @@ export class KnowledgeBase {
             this.facts[i].id,
             this.facts[i].content,
             this.facts[i].topics,
-            new Set(newSourceIds)
+            new Set(newSourceIds),
+            this.facts[i].addedAt
           );
           migrated = true;
         }
@@ -586,7 +587,8 @@ export class KnowledgeBase {
         this.createTopic(topicName, `Information about ${topicName}`, false);
       }
 
-      const updatedFact = new Fact(id, content, topicNames, sourceIds);
+      const existingFact = this.facts[existingIndex];
+      const updatedFact = new Fact(id, content, topicNames, sourceIds, existingFact.addedAt);
       this.facts[existingIndex] = updatedFact;
       this.saveFacts();
       return updatedFact;
@@ -601,8 +603,8 @@ export class KnowledgeBase {
     const existingIndex = this.topics.findIndex(t => t.name === name);
     if (existingIndex >= 0) {
       const existingTopic = this.topics[existingIndex];
-      // Preserve the isPersistent value from the existing topic
-      const updatedTopic = new Topic(name, newDescription, existingTopic.isPersistent);
+      // Preserve the isPersistent value and addedAt from the existing topic
+      const updatedTopic = new Topic(name, newDescription, existingTopic.isPersistent, existingTopic.addedAt);
       this.topics[existingIndex] = updatedTopic;
       this.saveTopics();
       return updatedTopic;
@@ -637,7 +639,7 @@ export class KnowledgeBase {
         }
 
         // Update the fact with new topics
-        this.facts[index] = new Fact(fact.id, fact.content, newTopics, fact.sourceIds);
+        this.facts[index] = new Fact(fact.id, fact.content, newTopics, fact.sourceIds, fact.addedAt);
         factsUpdated++;
       }
     });
@@ -665,8 +667,8 @@ export class KnowledgeBase {
       return false;
     }
 
-    // Create new topic with the new name, same description, and preserve isPersistent value
-    const newTopic = new Topic(newName, oldTopic.description, oldTopic.isPersistent);
+    // Create new topic with the new name, same description, and preserve isPersistent value and addedAt
+    const newTopic = new Topic(newName, oldTopic.description, oldTopic.isPersistent, oldTopic.addedAt);
     this.upsertTopic(newTopic);
 
     // Update all facts that reference the old topic
@@ -684,7 +686,7 @@ export class KnowledgeBase {
         }
 
         // Update the fact with new topics
-        this.facts[index] = new Fact(fact.id, fact.content, newTopics, fact.sourceIds);
+        this.facts[index] = new Fact(fact.id, fact.content, newTopics, fact.sourceIds, fact.addedAt);
         factsUpdated++;
       }
     });
@@ -709,7 +711,7 @@ export class KnowledgeBase {
     if (existingIndex >= 0) {
       const existingTopic = this.topics[existingIndex];
       // Create new topic with updated persistence status, preserving other properties
-      const updatedTopic = new Topic(existingTopic.name, existingTopic.description, isPersistent);
+      const updatedTopic = new Topic(existingTopic.name, existingTopic.description, isPersistent, existingTopic.addedAt);
       this.topics[existingIndex] = updatedTopic;
       this.saveTopics();
       return true;

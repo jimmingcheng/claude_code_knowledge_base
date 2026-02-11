@@ -8,7 +8,8 @@ export declare class Fact {
     readonly content: string;
     readonly topics: Set<string>;
     readonly sourceIds: Set<number>;
-    constructor(id: number, content: string, topics: Set<string>, sourceIds: Set<number>);
+    readonly addedAt: string;
+    constructor(id: number, content: string, topics: Set<string>, sourceIds: Set<number>, addedAt?: string);
     /**
      * Creates a Fact instance from a plain object (e.g., from JSON data).
      * Handles backward compatibility: reads old `sources: string[]` field as empty sourceIds.
@@ -20,6 +21,7 @@ export declare class Fact {
         topics: string[];
         sourceIds?: number[];
         sources?: string[];
+        addedAt?: string;
     }): Fact;
     /**
      * Converts the Fact instance to a plain object for serialization.
@@ -29,6 +31,7 @@ export declare class Fact {
         content: string;
         topics: string[];
         sourceIds: number[];
+        addedAt: string;
     };
     /**
      * Checks if this fact has a specific topic (by Topic object).

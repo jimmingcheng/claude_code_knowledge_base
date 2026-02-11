@@ -154,6 +154,7 @@ describe('Source Migration', () => {
     const factsData = JSON.parse(fs.readFileSync(path.join(testDir, 'facts.json'), 'utf-8'));
     expect(factsData[0]).toHaveProperty('sourceIds');
     expect(factsData[0]).not.toHaveProperty('sources');
+    expect(factsData[0]).toHaveProperty('addedAt');
 
     const sourcesData = JSON.parse(fs.readFileSync(path.join(testDir, 'sources.json'), 'utf-8'));
     expect(sourcesData.length).toBe(2);
