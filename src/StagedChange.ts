@@ -3,6 +3,8 @@
  * Staged changes allow mutations to be proposed, reviewed, and then applied or rejected.
  */
 
+import { SourceType } from './Source';
+
 // All possible mutation operations
 export type StagedChangeOperation =
   | 'add-fact'
@@ -14,7 +16,8 @@ export type StagedChangeOperation =
   | 'merge-topics'
   | 'rename-topic'
   | 'set-topic-persistence'
-  | 'save-link';
+  | 'add-source'
+  | 'remove-source';
 
 // Why a change was staged for review
 export type StagingReason =
@@ -37,14 +40,14 @@ export interface ConflictContext {
 export interface AddFactParams {
   content: string;
   topics: string[];
-  sources: string[];
+  sourceIds: number[];
 }
 
 export interface UpdateFactParams {
   id: number;
   content: string;
   topics: string[];
-  sources: string[];
+  sourceIds: number[];
 }
 
 export interface RemoveFactParams {
@@ -81,9 +84,15 @@ export interface SetTopicPersistenceParams {
   isPersistent: boolean;
 }
 
-export interface SaveLinkParams {
-  url: string;
+export interface AddSourceParams {
+  type: SourceType;
   title: string;
+  url?: string;
+  refId?: number;
+}
+
+export interface RemoveSourceParams {
+  id: number;
 }
 
 // Map from operation to its params type
@@ -97,7 +106,8 @@ export type OperationParams = {
   'merge-topics': MergeTopicsParams;
   'rename-topic': RenameTopicParams;
   'set-topic-persistence': SetTopicPersistenceParams;
-  'save-link': SaveLinkParams;
+  'add-source': AddSourceParams;
+  'remove-source': RemoveSourceParams;
 };
 
 // A single staged change

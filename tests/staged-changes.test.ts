@@ -52,7 +52,7 @@ describe('Staged Changes', () => {
       {
         id: 1,
         operation: 'add-fact',
-        params: { content: 'Test fact', topics: ['test'], sources: [] },
+        params: { content: 'Test fact', topics: ['test'], sourceIds: [] },
         description: 'Add test fact',
         stagingReasons: ['batch'],
       },
@@ -76,7 +76,7 @@ describe('Staged Changes', () => {
       {
         id: 1,
         operation: 'add-fact',
-        params: { content: 'Fact 1', topics: ['t1'], sources: [] },
+        params: { content: 'Fact 1', topics: ['t1'], sourceIds: [] },
         description: 'Add fact 1',
         stagingReasons: ['batch'],
       },
@@ -108,14 +108,14 @@ describe('Staged Changes', () => {
       {
         id: 1,
         operation: 'add-fact',
-        params: { content: 'Staged fact one', topics: ['staging-test'], sources: [] },
+        params: { content: 'Staged fact one', topics: ['staging-test'], sourceIds: [] },
         description: 'Add staged fact one',
         stagingReasons: ['batch'],
       },
       {
         id: 2,
         operation: 'add-fact',
-        params: { content: 'Staged fact two', topics: ['staging-test'], sources: [] },
+        params: { content: 'Staged fact two', topics: ['staging-test'], sourceIds: [] },
         description: 'Add staged fact two',
         stagingReasons: ['batch'],
       },
@@ -142,21 +142,21 @@ describe('Staged Changes', () => {
       {
         id: 1,
         operation: 'add-fact',
-        params: { content: 'Apply this', topics: ['test'], sources: [] },
+        params: { content: 'Apply this', topics: ['test'], sourceIds: [] },
         description: 'Apply this fact',
         stagingReasons: ['batch'],
       },
       {
         id: 2,
         operation: 'add-fact',
-        params: { content: 'Keep staged', topics: ['test'], sources: [] },
+        params: { content: 'Keep staged', topics: ['test'], sourceIds: [] },
         description: 'Keep this staged',
         stagingReasons: ['batch'],
       },
       {
         id: 3,
         operation: 'add-fact',
-        params: { content: 'Also apply', topics: ['test'], sources: [] },
+        params: { content: 'Also apply', topics: ['test'], sourceIds: [] },
         description: 'Also apply this',
         stagingReasons: ['batch'],
       },
@@ -187,7 +187,7 @@ describe('Staged Changes', () => {
       {
         id: 1,
         operation: 'add-fact',
-        params: { content: 'Should not be added', topics: ['test'], sources: [] },
+        params: { content: 'Should not be added', topics: ['test'], sourceIds: [] },
         description: 'This should be rejected',
         stagingReasons: ['batch'],
       },
@@ -212,21 +212,21 @@ describe('Staged Changes', () => {
       {
         id: 1,
         operation: 'add-fact',
-        params: { content: 'Keep this', topics: ['test'], sources: [] },
+        params: { content: 'Keep this', topics: ['test'], sourceIds: [] },
         description: 'Keep this staged',
         stagingReasons: ['batch'],
       },
       {
         id: 2,
         operation: 'add-fact',
-        params: { content: 'Reject this', topics: ['test'], sources: [] },
+        params: { content: 'Reject this', topics: ['test'], sourceIds: [] },
         description: 'Reject this',
         stagingReasons: ['batch'],
       },
       {
         id: 3,
         operation: 'add-fact',
-        params: { content: 'Also keep', topics: ['test'], sources: [] },
+        params: { content: 'Also keep', topics: ['test'], sourceIds: [] },
         description: 'Also keep this',
         stagingReasons: ['batch'],
       },
@@ -251,21 +251,21 @@ describe('Staged Changes', () => {
       {
         id: 1,
         operation: 'add-fact',
-        params: { content: 'Fact A', topics: ['test'], sources: [] },
+        params: { content: 'Fact A', topics: ['test'], sourceIds: [] },
         description: 'Add fact A',
         stagingReasons: ['batch'],
       },
       {
         id: 2,
         operation: 'add-fact',
-        params: { content: 'Fact B (reject)', topics: ['test'], sources: [] },
+        params: { content: 'Fact B (reject)', topics: ['test'], sourceIds: [] },
         description: 'Add fact B',
         stagingReasons: ['batch'],
       },
       {
         id: 3,
         operation: 'add-fact',
-        params: { content: 'Fact C', topics: ['test'], sources: [] },
+        params: { content: 'Fact C', topics: ['test'], sourceIds: [] },
         description: 'Add fact C',
         stagingReasons: ['batch'],
       },
@@ -309,7 +309,7 @@ describe('Staged Changes', () => {
       {
         id: 1,
         operation: 'add-fact',
-        params: { content: 'Should be cleared', topics: ['test'], sources: [] },
+        params: { content: 'Should be cleared', topics: ['test'], sourceIds: [] },
         description: 'This will be cleared',
         stagingReasons: ['batch'],
       },
@@ -344,14 +344,14 @@ describe('Staged Changes', () => {
       {
         id: 2,
         operation: 'update-fact',
-        params: { id: factId, content: 'Updated via staging', topics: ['original-topic', 'staged-topic'], sources: [] },
+        params: { id: factId, content: 'Updated via staging', topics: ['original-topic', 'staged-topic'], sourceIds: [] },
         description: 'Update existing fact',
         stagingReasons: ['batch'],
       },
       {
         id: 3,
         operation: 'add-fact',
-        params: { content: 'New staged fact', topics: ['staged-topic'], sources: [] },
+        params: { content: 'New staged fact', topics: ['staged-topic'], sourceIds: [] },
         description: 'Add new fact',
         stagingReasons: ['batch'],
       },
@@ -455,26 +455,63 @@ describe('Staged Changes', () => {
     expect(topics.some((t: any) => t.name === 'new-name')).toBe(true);
   });
 
-  test('apply-staged with save-link operation', () => {
+  test('apply-staged with add-source operation', () => {
     const json = makeStagedJson([
       {
         id: 1,
-        operation: 'save-link',
-        params: { url: 'https://example.com', title: 'Example Site' },
-        description: 'Save example link',
+        operation: 'add-source',
+        params: { type: 'url', title: 'Example Site', url: 'https://example.com' },
+        description: 'Add example source',
         stagingReasons: ['batch'],
       },
     ]);
 
     runCLI(`stage-changes '${json}'`);
     const result = runCLI('apply-staged all');
-    expect(result).toContain('Saved link');
+    expect(result).toContain('Added source');
 
-    // Verify sources.md was created with the link
-    const sourcesPath = path.join(testDir, 'sources.md');
-    expect(fs.existsSync(sourcesPath)).toBe(true);
-    const content = fs.readFileSync(sourcesPath, 'utf-8');
-    expect(content).toContain('https://example.com');
-    expect(content).toContain('Example Site');
+    // Verify source was created
+    const sourcesResult = runCLI('list-sources');
+    const sources = JSON.parse(sourcesResult);
+    expect(sources.length).toBe(1);
+    expect(sources[0].type).toBe('url');
+    expect(sources[0].title).toBe('Example Site');
+    expect(sources[0].url).toBe('https://example.com');
+  });
+
+  test('apply-staged with add-source refId mapping', () => {
+    const json = makeStagedJson([
+      {
+        id: 1,
+        operation: 'add-source',
+        params: { type: 'url', title: 'Claude API docs', url: 'https://docs.anthropic.com', refId: 100 },
+        description: 'Add source for Claude API docs',
+        stagingReasons: ['batch'],
+      },
+      {
+        id: 2,
+        operation: 'add-fact',
+        params: { content: 'Uses Claude API', topics: ['api'], sourceIds: [100] },
+        description: 'Add fact about Claude API',
+        stagingReasons: ['batch'],
+      },
+    ]);
+
+    runCLI(`stage-changes '${json}'`);
+    const result = runCLI('apply-staged all');
+    expect(result).toContain('Added source');
+    expect(result).toContain('Added fact');
+
+    // Verify source was created
+    const sourcesResult = runCLI('list-sources');
+    const sources = JSON.parse(sourcesResult);
+    expect(sources.length).toBe(1);
+    const sourceId = sources[0].id;
+
+    // Verify fact references the real source ID (not the refId 100)
+    const factsResult = runCLI('list-facts');
+    const facts = JSON.parse(factsResult);
+    expect(facts.length).toBe(1);
+    expect(facts[0].sourceIds).toContain(sourceId);
   });
 });

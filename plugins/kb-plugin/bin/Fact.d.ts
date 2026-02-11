@@ -1,26 +1,25 @@
 import { Topic } from './Topic';
 /**
- * Type alias for source representation - can be expanded later if needed.
- */
-export type Source = string;
-/**
  * Represents a fact in the knowledge base system.
- * Facts contain content, are categorized by topics, and have sources.
+ * Facts contain content, are categorized by topics, and reference sources by ID.
  */
 export declare class Fact {
     readonly id: number;
     readonly content: string;
     readonly topics: Set<string>;
-    readonly sources: Set<Source>;
-    constructor(id: number, content: string, topics: Set<string>, sources: Set<Source>);
+    readonly sourceIds: Set<number>;
+    constructor(id: number, content: string, topics: Set<string>, sourceIds: Set<number>);
     /**
      * Creates a Fact instance from a plain object (e.g., from JSON data).
+     * Handles backward compatibility: reads old `sources: string[]` field as empty sourceIds.
+     * Migration of old string sources to Source entities happens in KnowledgeBase.
      */
     static fromObject(obj: {
         id: number;
         content: string;
         topics: string[];
-        sources: Source[];
+        sourceIds?: number[];
+        sources?: string[];
     }): Fact;
     /**
      * Converts the Fact instance to a plain object for serialization.
@@ -29,7 +28,7 @@ export declare class Fact {
         id: number;
         content: string;
         topics: string[];
-        sources: Source[];
+        sourceIds: number[];
     };
     /**
      * Checks if this fact has a specific topic (by Topic object).
@@ -60,9 +59,9 @@ export declare class Fact {
      */
     getTopicNames(): string[];
     /**
-     * Checks if this fact has a specific source.
+     * Checks if this fact has a specific source by ID.
      */
-    hasSource(source: Source): boolean;
+    hasSourceId(id: number): boolean;
     /**
      * Returns a string representation of the fact.
      */

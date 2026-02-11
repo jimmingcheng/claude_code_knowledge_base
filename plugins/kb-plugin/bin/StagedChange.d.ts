@@ -2,7 +2,8 @@
  * Data model for staged changes in the knowledge base.
  * Staged changes allow mutations to be proposed, reviewed, and then applied or rejected.
  */
-export type StagedChangeOperation = 'add-fact' | 'update-fact' | 'remove-fact' | 'add-topic' | 'update-topic' | 'remove-topic' | 'merge-topics' | 'rename-topic' | 'set-topic-persistence' | 'save-link';
+import { SourceType } from './Source';
+export type StagedChangeOperation = 'add-fact' | 'update-fact' | 'remove-fact' | 'add-topic' | 'update-topic' | 'remove-topic' | 'merge-topics' | 'rename-topic' | 'set-topic-persistence' | 'add-source' | 'remove-source';
 export type StagingReason = 'batch' | 'persistent-topic' | 'conflict' | 'reorganization' | 'scope-mismatch' | 'sensitive-content';
 export interface ConflictContext {
     existingFactId: number;
@@ -13,13 +14,13 @@ export interface ConflictContext {
 export interface AddFactParams {
     content: string;
     topics: string[];
-    sources: string[];
+    sourceIds: number[];
 }
 export interface UpdateFactParams {
     id: number;
     content: string;
     topics: string[];
-    sources: string[];
+    sourceIds: number[];
 }
 export interface RemoveFactParams {
     id: number;
@@ -48,9 +49,14 @@ export interface SetTopicPersistenceParams {
     name: string;
     isPersistent: boolean;
 }
-export interface SaveLinkParams {
-    url: string;
+export interface AddSourceParams {
+    type: SourceType;
     title: string;
+    url?: string;
+    refId?: number;
+}
+export interface RemoveSourceParams {
+    id: number;
 }
 export type OperationParams = {
     'add-fact': AddFactParams;
@@ -62,7 +68,8 @@ export type OperationParams = {
     'merge-topics': MergeTopicsParams;
     'rename-topic': RenameTopicParams;
     'set-topic-persistence': SetTopicPersistenceParams;
-    'save-link': SaveLinkParams;
+    'add-source': AddSourceParams;
+    'remove-source': RemoveSourceParams;
 };
 export interface StagedChange {
     id: number;

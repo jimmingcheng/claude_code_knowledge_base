@@ -31,19 +31,19 @@ function main() {
   const fact1 = kb.createFact(
     'TypeScript is a superset of JavaScript that adds static type definitions.',
     new Set(['Programming', 'TypeScript']),
-    new Set(['https://www.typescriptlang.org/', 'Official TypeScript Documentation'])
+    new Set<number>()
   );
 
   const fact2 = kb.createFact(
     'Classes in TypeScript can have private, protected, and public access modifiers.',
     new Set(['Programming', 'TypeScript']),
-    new Set(['TypeScript Handbook', 'Personal experience'])
+    new Set<number>()
   );
 
   const fact3 = kb.createFact(
     'Modern web applications often use TypeScript for better developer experience.',
     new Set(['Programming', 'TypeScript', 'Web Development']),
-    new Set(['Industry surveys', 'Developer community feedback'])
+    new Set<number>()
   );
 
   console.log(`\nCreated facts with auto-generated IDs:`);

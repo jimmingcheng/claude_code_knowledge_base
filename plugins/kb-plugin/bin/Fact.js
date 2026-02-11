@@ -3,22 +3,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Fact = void 0;
 /**
  * Represents a fact in the knowledge base system.
- * Facts contain content, are categorized by topics, and have sources.
+ * Facts contain content, are categorized by topics, and reference sources by ID.
  */
 class Fact {
-    constructor(id, content, topics, sources) {
+    constructor(id, content, topics, sourceIds) {
         this.id = id;
         this.content = content;
         this.topics = new Set(topics); // Create a copy to ensure immutability
-        this.sources = new Set(sources); // Create a copy to ensure immutability
+        this.sourceIds = new Set(sourceIds); // Create a copy to ensure immutability
     }
     /**
      * Creates a Fact instance from a plain object (e.g., from JSON data).
+     * Handles backward compatibility: reads old `sources: string[]` field as empty sourceIds.
+     * Migration of old string sources to Source entities happens in KnowledgeBase.
      */
     static fromObject(obj) {
         const topics = new Set(obj.topics);
-        const sources = new Set(obj.sources);
-        return new Fact(obj.id, obj.content, topics, sources);
+        // Use sourceIds if present; if old-format sources field, leave empty (migration in KnowledgeBase)
+        const sourceIds = new Set(obj.sourceIds ?? []);
+        return new Fact(obj.id, obj.content, topics, sourceIds);
     }
     /**
      * Converts the Fact instance to a plain object for serialization.
@@ -28,7 +31,7 @@ class Fact {
             id: this.id,
             content: this.content,
             topics: Array.from(this.topics),
-            sources: Array.from(this.sources),
+            sourceIds: Array.from(this.sourceIds),
         };
     }
     /**
@@ -74,10 +77,10 @@ class Fact {
         return Array.from(this.topics);
     }
     /**
-     * Checks if this fact has a specific source.
+     * Checks if this fact has a specific source by ID.
      */
-    hasSource(source) {
-        return this.sources.has(source);
+    hasSourceId(id) {
+        return this.sourceIds.has(id);
     }
     /**
      * Returns a string representation of the fact.

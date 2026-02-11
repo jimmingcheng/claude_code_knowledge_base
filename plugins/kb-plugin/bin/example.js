@@ -23,9 +23,9 @@ function main() {
     console.log(`- TypeScript: ${typeScriptTopic.name}`);
     console.log(`- Web Development: ${webDevTopic.name}`);
     // Create some example facts with auto-generated numeric IDs
-    const fact1 = kb.createFact('TypeScript is a superset of JavaScript that adds static type definitions.', new Set(['Programming', 'TypeScript']), new Set(['https://www.typescriptlang.org/', 'Official TypeScript Documentation']));
-    const fact2 = kb.createFact('Classes in TypeScript can have private, protected, and public access modifiers.', new Set(['Programming', 'TypeScript']), new Set(['TypeScript Handbook', 'Personal experience']));
-    const fact3 = kb.createFact('Modern web applications often use TypeScript for better developer experience.', new Set(['Programming', 'TypeScript', 'Web Development']), new Set(['Industry surveys', 'Developer community feedback']));
+    const fact1 = kb.createFact('TypeScript is a superset of JavaScript that adds static type definitions.', new Set(['Programming', 'TypeScript']), new Set());
+    const fact2 = kb.createFact('Classes in TypeScript can have private, protected, and public access modifiers.', new Set(['Programming', 'TypeScript']), new Set());
+    const fact3 = kb.createFact('Modern web applications often use TypeScript for better developer experience.', new Set(['Programming', 'TypeScript', 'Web Development']), new Set());
     console.log(`\nCreated facts with auto-generated IDs:`);
     console.log(`- Fact 1: ID ${fact1.id}`);
     console.log(`- Fact 2: ID ${fact2.id}`);

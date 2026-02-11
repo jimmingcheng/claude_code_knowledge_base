@@ -1,41 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
 const index_1 = require("./index");
 const kbPath = process.env.KB_PATH || './kb';
 // Helper function to parse and validate comma-separated topic names
@@ -83,17 +48,20 @@ function main() {
         console.log('  stats                 - Show knowledge base statistics');
         console.log('  list-topics           - List all topics');
         console.log('  list-facts            - List all facts');
+        console.log('  list-sources          - List all sources');
+        console.log('  get-source <id>       - Get a single source by ID');
         console.log('  facts-by-any-topics <topic1,topic2,...> - Get facts matching ANY of the specified topics (OR logic)');
         console.log('  facts-by-all-topics <topic1,topic2,...> - Get facts matching ALL of the specified topics (AND logic)');
         console.log('');
         console.log('Content management (requires metadata initialization):');
-        console.log('  add-fact <content> [topic1,topic2,...] [source1,source2,...]');
+        console.log('  add-fact <content> [topic1,topic2,...] [sourceId1,sourceId2,...]');
         console.log('  add-topic <name> <description> [isPersistent]');
-        console.log('  save-link <url> <title> - Save a hyperlink to kb/sources.md');
+        console.log('  add-source <type> <title> [url]  - Add a source (type: person|url)');
         console.log('');
         console.log('CRUD Operations:');
-        console.log('  update-fact <id> <content> [topic1,topic2,...] [source1,source2,...]');
+        console.log('  update-fact <id> <content> [topic1,topic2,...] [sourceId1,sourceId2,...]');
         console.log('  remove-fact <id>      - Remove a fact by ID');
+        console.log('  remove-source <id>    - Remove a source by ID');
         console.log('  update-topic <name> <description> - Update topic description');
         console.log('  remove-topic <name>   - Remove a topic');
         console.log('');
@@ -131,6 +99,7 @@ function main() {
             console.log('Statistics:');
             console.log(`  Topics: ${stats.totalTopics}`);
             console.log(`  Facts: ${stats.totalFacts}`);
+            console.log(`  Sources: ${stats.totalSources}`);
             console.log(`  Average topics per fact: ${stats.averageTopicsPerFact}`);
             break;
         }
@@ -161,6 +130,26 @@ function main() {
         case 'list-facts': {
             const facts = kb.getAllFacts();
             console.log(JSON.stringify(facts.map(f => f.toObject()), null, 2));
+            break;
+        }
+        case 'list-sources': {
+            const sources = kb.getAllSources();
+            console.log(JSON.stringify(sources.map(s => s.toObject()), null, 2));
+            break;
+        }
+        case 'get-source': {
+            const id = parseInt(args[1]);
+            if (!id || isNaN(id)) {
+                console.error('Please provide a valid source ID');
+                return;
+            }
+            const source = kb.findSourceById(id);
+            if (source) {
+                console.log(JSON.stringify(source.toObject(), null, 2));
+            }
+            else {
+                console.error(`Source with ID ${id} not found`);
+            }
             break;
         }
         case 'facts-by-any-topics': {
@@ -198,12 +187,12 @@ function main() {
             }
             const content = args[1];
             const topicNames = args[2] ? args[2].split(',').map(t => t.trim()) : [];
-            const sources = args[3] ? args[3].split(',').map(s => s.trim()) : [];
+            const sourceIds = args[3] ? args[3].split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n)) : [];
             if (!content) {
                 console.error('Please provide fact content');
                 return;
             }
-            const fact = kb.createFact(content, new Set(topicNames), new Set(sources));
+            const fact = kb.createFact(content, new Set(topicNames), new Set(sourceIds));
             console.log(`Created fact with ID: ${fact.id}`);
             console.log(JSON.stringify(fact.toObject(), null, 2));
             break;
@@ -231,6 +220,49 @@ function main() {
             console.log(JSON.stringify(topic.toObject(), null, 2));
             break;
         }
+        case 'add-source': {
+            // Check if metadata exists before allowing source creation
+            if (!kb.hasMetadata()) {
+                console.error('ERROR: Knowledge base metadata not initialized.');
+                console.error('You must run "claude-kb set-metadata <name> <description>" first.');
+                process.exit(1);
+            }
+            const type = args[1];
+            const title = args[2];
+            const url = args[3];
+            if (!type || (type !== 'person' && type !== 'url')) {
+                console.error('Please provide a valid source type (person or url)');
+                console.error('Usage: claude-kb add-source <type> <title> [url]');
+                return;
+            }
+            if (!title) {
+                console.error('Please provide source title');
+                return;
+            }
+            if (type === 'url' && !url) {
+                console.error('URL is required for url-type sources');
+                return;
+            }
+            const source = kb.createSource(type, title, url);
+            console.log(`Created source with ID: ${source.id}`);
+            console.log(JSON.stringify(source.toObject(), null, 2));
+            break;
+        }
+        case 'remove-source': {
+            const id = parseInt(args[1]);
+            if (!id || isNaN(id)) {
+                console.error('Please provide a valid source ID');
+                return;
+            }
+            const success = kb.removeSourceById(id);
+            if (success) {
+                console.log(`Removed source with ID: ${id}`);
+            }
+            else {
+                console.error(`Source with ID ${id} not found`);
+            }
+            break;
+        }
         // CRUD Operations
         case 'update-fact': {
             // Check if metadata exists before allowing fact updates
@@ -242,7 +274,7 @@ function main() {
             const id = parseInt(args[1]);
             const content = args[2];
             const topicNames = args[3] ? args[3].split(',').map(t => t.trim()) : [];
-            const sources = args[4] ? args[4].split(',').map(s => s.trim()) : [];
+            const sourceIds = args[4] ? args[4].split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n)) : [];
             if (!id || isNaN(id)) {
                 console.error('Please provide a valid fact ID');
                 return;
@@ -251,7 +283,7 @@ function main() {
                 console.error('Please provide fact content');
                 return;
             }
-            const updatedFact = kb.updateFact(id, content, new Set(topicNames), new Set(sources));
+            const updatedFact = kb.updateFact(id, content, new Set(topicNames), new Set(sourceIds));
             if (updatedFact) {
                 console.log(`Updated fact with ID: ${updatedFact.id}`);
                 console.log(JSON.stringify(updatedFact.toObject(), null, 2));
@@ -402,39 +434,6 @@ function main() {
             }
             break;
         }
-        case 'save-link': {
-            const url = args[1];
-            const title = args[2];
-            if (!url || !title) {
-                console.error('Please provide both URL and title');
-                console.error('Usage: claude-kb save-link <url> <title>');
-                return;
-            }
-            const sourcesPath = path.join(kbPath, 'sources.md');
-            try {
-                // Initialize file if doesn't exist
-                if (!fs.existsSync(sourcesPath)) {
-                    fs.writeFileSync(sourcesPath, '# Sources\n\n', 'utf-8');
-                }
-                // Read existing content
-                const content = fs.readFileSync(sourcesPath, 'utf-8');
-                // Check for duplicate (substring match)
-                if (content.includes(url)) {
-                    console.log('Link already exists (skipped)');
-                    break;
-                }
-                // Append new link
-                const today = new Date().toISOString().split('T')[0];
-                const newLine = `- [${title}](${url}) - Added ${today}\n`;
-                fs.appendFileSync(sourcesPath, newLine, 'utf-8');
-                console.log(`Saved link to kb/sources.md: ${title}`);
-            }
-            catch (error) {
-                console.error(`Failed to save link: ${error instanceof Error ? error.message : String(error)}`);
-                process.exit(1);
-            }
-            break;
-        }
         // Staged Changes Commands
         case 'stage-changes': {
             const jsonInput = args[1];
@@ -479,11 +478,11 @@ function main() {
             // Group changes by category
             const factOps = new Set(['add-fact', 'update-fact', 'remove-fact']);
             const topicOps = new Set(['add-topic', 'update-topic', 'remove-topic', 'merge-topics', 'rename-topic', 'set-topic-persistence']);
-            const linkOps = new Set(['save-link']);
+            const sourceOps = new Set(['add-source', 'remove-source']);
             const factChanges = staged.changes.filter(c => factOps.has(c.operation));
             const topicChanges = staged.changes.filter(c => topicOps.has(c.operation));
-            const linkChanges = staged.changes.filter(c => linkOps.has(c.operation));
-            const otherChanges = staged.changes.filter(c => !factOps.has(c.operation) && !topicOps.has(c.operation) && !linkOps.has(c.operation));
+            const sourceChanges = staged.changes.filter(c => sourceOps.has(c.operation));
+            const otherChanges = staged.changes.filter(c => !factOps.has(c.operation) && !topicOps.has(c.operation) && !sourceOps.has(c.operation));
             // Escape pipe characters in table cell values
             const esc = (s) => s.replace(/\|/g, '\\|');
             // Header line
@@ -515,19 +514,19 @@ function main() {
                     console.log(`| ${c.id} | ${c.operation} | ${esc(c.description)} | ${esc(reason)} |`);
                 }
             }
-            // Link changes table
-            if (linkChanges.length > 0) {
+            // Source changes table
+            if (sourceChanges.length > 0) {
                 console.log('');
-                console.log('**Link Changes:**');
+                console.log('**Source Changes:**');
                 console.log('');
-                console.log('| # | Operation | URL | Title | Reason |');
-                console.log('|---|-----------|-----|-------|--------|');
-                for (const c of linkChanges) {
+                console.log('| # | Operation | Type | Title | Reason |');
+                console.log('|---|-----------|------|-------|--------|');
+                for (const c of sourceChanges) {
                     const p = c.params;
-                    const url = esc(String(p.url || ''));
+                    const type = esc(String(p.type || ''));
                     const title = esc(String(p.title || ''));
                     const reason = c.stagingReasons.join(', ');
-                    console.log(`| ${c.id} | ${c.operation} | ${url} | ${title} | ${esc(reason)} |`);
+                    console.log(`| ${c.id} | ${c.operation} | ${type} | ${title} | ${esc(reason)} |`);
                 }
             }
             // Other changes table
@@ -573,36 +572,13 @@ function main() {
                 console.error('       claude-kb apply-staged 1,2,3');
                 process.exit(1);
             }
+            // Shared batch context for refId -> actualId mapping
+            const context = { sourceIdMap: new Map() };
             if (selector === 'all') {
                 // Apply all changes
                 const results = [];
                 for (const change of staged.changes) {
-                    // Handle save-link at CLI level
-                    if (change.operation === 'save-link') {
-                        const p = change.params;
-                        const sourcesPath = path.join(kbPath, 'sources.md');
-                        try {
-                            if (!fs.existsSync(sourcesPath)) {
-                                fs.writeFileSync(sourcesPath, '# Sources\n\n', 'utf-8');
-                            }
-                            const content = fs.readFileSync(sourcesPath, 'utf-8');
-                            if (content.includes(p.url)) {
-                                results.push(`Link already exists (skipped): ${p.url}`);
-                            }
-                            else {
-                                const today = new Date().toISOString().split('T')[0];
-                                const newLine = `- [${p.title}](${p.url}) - Added ${today}\n`;
-                                fs.appendFileSync(sourcesPath, newLine, 'utf-8');
-                                results.push(`Saved link: ${p.title}`);
-                            }
-                        }
-                        catch (error) {
-                            results.push(`ERROR saving link: ${error instanceof Error ? error.message : String(error)}`);
-                        }
-                    }
-                    else {
-                        results.push(kb.applyStagedChange(change));
-                    }
+                    results.push(kb.applyStagedChange(change, context));
                 }
                 kb.clearStagedChanges();
                 console.log(`Applied ${staged.changes.length} change(s):`);
@@ -623,31 +599,7 @@ function main() {
                 }
                 const results = [];
                 for (const change of toApply) {
-                    if (change.operation === 'save-link') {
-                        const p = change.params;
-                        const sourcesPath = path.join(kbPath, 'sources.md');
-                        try {
-                            if (!fs.existsSync(sourcesPath)) {
-                                fs.writeFileSync(sourcesPath, '# Sources\n\n', 'utf-8');
-                            }
-                            const content = fs.readFileSync(sourcesPath, 'utf-8');
-                            if (content.includes(p.url)) {
-                                results.push(`Link already exists (skipped): ${p.url}`);
-                            }
-                            else {
-                                const today = new Date().toISOString().split('T')[0];
-                                const newLine = `- [${p.title}](${p.url}) - Added ${today}\n`;
-                                fs.appendFileSync(sourcesPath, newLine, 'utf-8');
-                                results.push(`Saved link: ${p.title}`);
-                            }
-                        }
-                        catch (error) {
-                            results.push(`ERROR saving link: ${error instanceof Error ? error.message : String(error)}`);
-                        }
-                    }
-                    else {
-                        results.push(kb.applyStagedChange(change));
-                    }
+                    results.push(kb.applyStagedChange(change, context));
                 }
                 if (remaining.length > 0) {
                     kb.saveStagedChanges({

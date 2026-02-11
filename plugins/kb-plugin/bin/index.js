@@ -1,12 +1,14 @@
 "use strict";
 // Main exports for the Claude Code Knowledge Base TypeScript library
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VERSION = exports.KnowledgeBaseMetadata = exports.KnowledgeBase = exports.Fact = exports.Topic = void 0;
+exports.VERSION = exports.KnowledgeBaseMetadata = exports.KnowledgeBase = exports.Source = exports.Fact = exports.Topic = void 0;
 exports.createKnowledgeBase = createKnowledgeBase;
 var Topic_1 = require("./Topic");
 Object.defineProperty(exports, "Topic", { enumerable: true, get: function () { return Topic_1.Topic; } });
 var Fact_1 = require("./Fact");
 Object.defineProperty(exports, "Fact", { enumerable: true, get: function () { return Fact_1.Fact; } });
+var Source_1 = require("./Source");
+Object.defineProperty(exports, "Source", { enumerable: true, get: function () { return Source_1.Source; } });
 var KnowledgeBase_1 = require("./KnowledgeBase");
 Object.defineProperty(exports, "KnowledgeBase", { enumerable: true, get: function () { return KnowledgeBase_1.KnowledgeBase; } });
 var KnowledgeBaseMetadata_1 = require("./KnowledgeBaseMetadata");

@@ -38,9 +38,10 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const Topic_1 = require("./Topic");
 const Fact_1 = require("./Fact");
+const Source_1 = require("./Source");
 const KnowledgeBaseMetadata_1 = require("./KnowledgeBaseMetadata");
 /**
- * Main knowledge base class that manages topics and facts.
+ * Main knowledge base class that manages topics, facts, and sources.
  * Loads data from JSON files and provides methods for querying and updating the knowledge base.
  */
 class KnowledgeBase {
@@ -48,7 +49,11 @@ class KnowledgeBase {
         this.kbPath = kbPath;
         this.metadata = this.loadMetadata(path.join(kbPath, 'kb.json'));
         this.topics = this.loadTopics(path.join(kbPath, 'topics.json'));
-        this.facts = this.loadFacts(path.join(kbPath, 'facts.json'));
+        this.sources = this.loadSources(path.join(kbPath, 'sources.json'));
+        // Load facts with migration support
+        const factsJsonPath = path.join(kbPath, 'facts.json');
+        this.facts = this.loadFacts(factsJsonPath);
+        this.migrateOldSourcesIfNeeded(factsJsonPath);
     }
     /**
      * Loads topics from the topics.json file.
@@ -82,6 +87,86 @@ class KnowledgeBase {
         catch (error) {
             console.warn(`Could not parse facts from ${factsJsonPath}:`, error);
             return [];
+        }
+    }
+    /**
+     * Loads sources from the sources.json file.
+     */
+    loadSources(sourcesJsonPath) {
+        if (!fs.existsSync(sourcesJsonPath)) {
+            return [];
+        }
+        try {
+            const fileContent = fs.readFileSync(sourcesJsonPath, 'utf-8');
+            const sourcesData = JSON.parse(fileContent);
+            return sourcesData.map(sourceObj => Source_1.Source.fromObject(sourceObj));
+        }
+        catch (error) {
+            console.warn(`Could not parse sources from ${sourcesJsonPath}:`, error);
+            return [];
+        }
+    }
+    /**
+     * Migrates old-format facts (sources: string[]) to new format (sourceIds: number[]).
+     * Runs once after loading if old-format data is detected.
+     */
+    migrateOldSourcesIfNeeded(factsJsonPath) {
+        if (!fs.existsSync(factsJsonPath)) {
+            return;
+        }
+        try {
+            const fileContent = fs.readFileSync(factsJsonPath, 'utf-8');
+            const factsData = JSON.parse(fileContent);
+            // Check if any fact has old-format "sources" field (string array) instead of "sourceIds"
+            const needsMigration = factsData.some((f) => Array.isArray(f.sources) && f.sources.length > 0 && typeof f.sources[0] === 'string' && f.sourceIds === undefined);
+            if (!needsMigration) {
+                return;
+            }
+            // Migrate each fact's string sources to Source entities
+            let migrated = false;
+            for (let i = 0; i < factsData.length; i++) {
+                const rawFact = factsData[i];
+                if (Array.isArray(rawFact.sources) && rawFact.sourceIds === undefined) {
+                    const newSourceIds = [];
+                    for (const sourceStr of rawFact.sources) {
+                        if (typeof sourceStr !== 'string')
+                            continue;
+                        const isUrl = sourceStr.startsWith('http://') || sourceStr.startsWith('https://');
+                        let source;
+                        if (isUrl) {
+                            // Check for existing source with same URL
+                            const existing = this.findSourceByUrl(sourceStr);
+                            if (existing) {
+                                source = existing;
+                            }
+                            else {
+                                source = this.createSource('url', sourceStr, sourceStr);
+                            }
+                        }
+                        else {
+                            // Person-type source
+                            const existing = this.sources.find(s => s.type === 'person' && s.title === sourceStr);
+                            if (existing) {
+                                source = existing;
+                            }
+                            else {
+                                source = this.createSource('person', sourceStr);
+                            }
+                        }
+                        newSourceIds.push(source.id);
+                    }
+                    // Update the in-memory fact
+                    this.facts[i] = new Fact_1.Fact(this.facts[i].id, this.facts[i].content, this.facts[i].topics, new Set(newSourceIds));
+                    migrated = true;
+                }
+            }
+            if (migrated) {
+                this.saveFacts();
+                this.saveSources();
+            }
+        }
+        catch (error) {
+            console.warn('Could not migrate old sources format:', error);
         }
     }
     /**
@@ -124,6 +209,16 @@ class KnowledgeBase {
         fs.writeFileSync(factsJsonPath, jsonContent, 'utf-8');
     }
     /**
+     * Saves sources to the sources.json file.
+     */
+    saveSources() {
+        this.ensureDataFilesExist();
+        const sourcesJsonPath = path.join(this.kbPath, 'sources.json');
+        const sourcesData = this.sources.map(source => source.toObject());
+        const jsonContent = JSON.stringify(sourcesData, null, 2);
+        fs.writeFileSync(sourcesJsonPath, jsonContent, 'utf-8');
+    }
+    /**
      * Saves metadata to the kb.json file.
      */
     saveMetadata() {
@@ -152,6 +247,12 @@ class KnowledgeBase {
      */
     getAllFacts() {
         return [...this.facts]; // Return a copy to prevent external modification
+    }
+    /**
+     * Returns all sources in the knowledge base.
+     */
+    getAllSources() {
+        return [...this.sources];
     }
     /**
      * Returns the knowledge base metadata.
@@ -242,6 +343,69 @@ class KnowledgeBase {
         const lowerQuery = query.toLowerCase();
         return this.facts.filter(fact => fact.content.toLowerCase().includes(lowerQuery));
     }
+    // --- Source methods ---
+    /**
+     * Finds a source by its ID.
+     */
+    findSourceById(id) {
+        return this.sources.find(source => source.id === id);
+    }
+    /**
+     * Finds a source by URL (for deduplication of url-type sources).
+     */
+    findSourceByUrl(url) {
+        return this.sources.find(source => source.matchesUrl(url));
+    }
+    /**
+     * Finds the maximum source ID currently in use.
+     */
+    getMaxSourceId() {
+        if (this.sources.length === 0) {
+            return 0;
+        }
+        const numericIds = this.sources
+            .map(source => source.id)
+            .filter(id => typeof id === 'number' && !isNaN(id));
+        if (numericIds.length === 0) {
+            return 0;
+        }
+        return Math.max(...numericIds);
+    }
+    /**
+     * Generates the next available source ID.
+     */
+    getNextSourceId() {
+        return this.getMaxSourceId() + 1;
+    }
+    /**
+     * Creates a new source. For url-type sources, deduplicates by URL.
+     */
+    createSource(type, title, url, addedAt) {
+        // Deduplicate url-type by URL
+        if (type === 'url' && url) {
+            const existing = this.findSourceByUrl(url);
+            if (existing) {
+                return existing;
+            }
+        }
+        const id = this.getNextSourceId();
+        const source = new Source_1.Source(id, type, title, url, addedAt);
+        this.sources.push(source);
+        this.saveSources();
+        return source;
+    }
+    /**
+     * Removes a source by ID.
+     */
+    removeSourceById(id) {
+        const initialLength = this.sources.length;
+        this.sources = this.sources.filter(s => s.id !== id);
+        if (this.sources.length < initialLength) {
+            this.saveSources();
+            return true;
+        }
+        return false;
+    }
     /**
      * Finds the maximum fact ID currently in use.
      */
@@ -280,13 +444,13 @@ class KnowledgeBase {
      * Creates a new fact with an auto-generated ID.
      * Topics will be created if they don't exist (as non-persistent auto-created topics).
      */
-    createFact(content, topicNames, sources) {
+    createFact(content, topicNames, sourceIds) {
         // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
         for (const topicName of topicNames) {
             this.createTopic(topicName, `Information about ${topicName}`, false);
         }
         const id = this.getNextFactId();
-        const fact = new Fact_1.Fact(id, content, topicNames, sources);
+        const fact = new Fact_1.Fact(id, content, topicNames, sourceIds);
         this.upsertFact(fact);
         return fact;
     }
@@ -364,14 +528,14 @@ class KnowledgeBase {
     /**
      * Updates an existing fact by ID. Returns the updated fact or null if not found.
      */
-    updateFact(id, content, topicNames, sources) {
+    updateFact(id, content, topicNames, sourceIds) {
         const existingIndex = this.facts.findIndex(f => f.id === id);
         if (existingIndex >= 0) {
             // Ensure all topics exist, create them if they don't (as non-persistent auto-created topics)
             for (const topicName of topicNames) {
                 this.createTopic(topicName, `Information about ${topicName}`, false);
             }
-            const updatedFact = new Fact_1.Fact(id, content, topicNames, sources);
+            const updatedFact = new Fact_1.Fact(id, content, topicNames, sourceIds);
             this.facts[existingIndex] = updatedFact;
             this.saveFacts();
             return updatedFact;
@@ -418,7 +582,7 @@ class KnowledgeBase {
                     }
                 }
                 // Update the fact with new topics
-                this.facts[index] = new Fact_1.Fact(fact.id, fact.content, newTopics, fact.sources);
+                this.facts[index] = new Fact_1.Fact(fact.id, fact.content, newTopics, fact.sourceIds);
                 factsUpdated++;
             }
         });
@@ -458,7 +622,7 @@ class KnowledgeBase {
                     }
                 }
                 // Update the fact with new topics
-                this.facts[index] = new Fact_1.Fact(fact.id, fact.content, newTopics, fact.sources);
+                this.facts[index] = new Fact_1.Fact(fact.id, fact.content, newTopics, fact.sourceIds);
                 factsUpdated++;
             }
         });
@@ -531,16 +695,27 @@ class KnowledgeBase {
     /**
      * Applies a single staged change by dispatching to the appropriate CRUD method.
      * Returns a human-readable result message.
+     * Optionally accepts a BatchApplyContext for refId -> actualId mapping.
      */
-    applyStagedChange(change) {
+    applyStagedChange(change, context) {
         const params = change.params;
         switch (change.operation) {
             case 'add-fact': {
-                const fact = this.createFact(params.content, new Set(params.topics || []), new Set(params.sources || []));
+                // Translate sourceIds through context.sourceIdMap if available
+                let sourceIds = params.sourceIds || [];
+                if (context) {
+                    sourceIds = sourceIds.map(id => context.sourceIdMap.get(id) ?? id);
+                }
+                const fact = this.createFact(params.content, new Set(params.topics || []), new Set(sourceIds));
                 return `Added fact #${fact.id}: "${params.content.substring(0, 60)}..."`;
             }
             case 'update-fact': {
-                const updated = this.updateFact(params.id, params.content, new Set(params.topics || []), new Set(params.sources || []));
+                // Translate sourceIds through context.sourceIdMap if available
+                let sourceIds = params.sourceIds || [];
+                if (context) {
+                    sourceIds = sourceIds.map(id => context.sourceIdMap.get(id) ?? id);
+                }
+                const updated = this.updateFact(params.id, params.content, new Set(params.topics || []), new Set(sourceIds));
                 if (updated) {
                     return `Updated fact #${params.id}`;
                 }
@@ -593,9 +768,20 @@ class KnowledgeBase {
                 }
                 return `ERROR: Topic "${params.name}" not found`;
             }
-            case 'save-link': {
-                // save-link writes to sources.md - handled at CLI level
-                return `SAVE_LINK:${params.url}:${params.title}`;
+            case 'add-source': {
+                const source = this.createSource(params.type, params.title, params.url);
+                // If refId is set and context is provided, store the mapping
+                if (params.refId !== undefined && context) {
+                    context.sourceIdMap.set(params.refId, source.id);
+                }
+                return `Added source #${source.id}: "${source.title}" (${source.type})`;
+            }
+            case 'remove-source': {
+                const removed = this.removeSourceById(params.id);
+                if (removed) {
+                    return `Removed source #${params.id}`;
+                }
+                return `ERROR: Source #${params.id} not found`;
             }
             default:
                 return `ERROR: Unknown operation "${change.operation}"`;
@@ -607,11 +793,13 @@ class KnowledgeBase {
     getStats() {
         const totalTopics = this.topics.length;
         const totalFacts = this.facts.length;
+        const totalSources = this.sources.length;
         const totalTopicReferences = this.facts.reduce((sum, fact) => sum + fact.topics.size, 0);
         const averageTopicsPerFact = totalFacts > 0 ? totalTopicReferences / totalFacts : 0;
         return {
             totalTopics,
             totalFacts,
+            totalSources,
             averageTopicsPerFact: Math.round(averageTopicsPerFact * 100) / 100, // Round to 2 decimal places
         };
     }
@@ -628,7 +816,7 @@ class KnowledgeBase {
         // They will be created by ensureDataFilesExist() when needed
     }
     /**
-     * Creates topics.json and facts.json if they don't exist.
+     * Creates topics.json, facts.json, and sources.json if they don't exist.
      * REQUIRES kb.json to exist first.
      */
     ensureDataFilesExist() {
@@ -647,6 +835,11 @@ class KnowledgeBase {
         const factsPath = path.join(this.kbPath, 'facts.json');
         if (!fs.existsSync(factsPath)) {
             fs.writeFileSync(factsPath, '[]', 'utf-8');
+        }
+        // Create empty sources.json if it doesn't exist
+        const sourcesPath = path.join(this.kbPath, 'sources.json');
+        if (!fs.existsSync(sourcesPath)) {
+            fs.writeFileSync(sourcesPath, '[]', 'utf-8');
         }
         // Create CLAUDE.md protection file
         this.ensureClaudeProtectionFile();
@@ -701,6 +894,7 @@ Direct file editing bypasses input validation and semantic understanding.`;
 - \`kb.json\` - Knowledge base metadata
 - \`topics.json\` - Topic definitions and persistence settings
 - \`facts.json\` - Fact content and topic associations
+- \`sources.json\` - Source definitions and metadata
 
 Direct modification bypasses critical input validation and can cause:
 - Malformed topic names (entire content blocks as topic IDs)

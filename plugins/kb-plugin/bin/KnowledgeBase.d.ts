@@ -1,15 +1,24 @@
 import { Topic } from './Topic';
-import { Fact, Source } from './Fact';
+import { Fact } from './Fact';
+import { Source } from './Source';
 import { KnowledgeBaseMetadata } from './KnowledgeBaseMetadata';
 import { StagedChange, StagedChangesFile } from './StagedChange';
 /**
- * Main knowledge base class that manages topics and facts.
+ * Context passed through a batch of staged change applications,
+ * allowing add-source refIds to be resolved to real IDs by subsequent add-fact operations.
+ */
+export interface BatchApplyContext {
+    sourceIdMap: Map<number, number>;
+}
+/**
+ * Main knowledge base class that manages topics, facts, and sources.
  * Loads data from JSON files and provides methods for querying and updating the knowledge base.
  */
 export declare class KnowledgeBase {
     private readonly kbPath;
     private topics;
     private facts;
+    private sources;
     private metadata;
     constructor(kbPath: string);
     /**
@@ -20,6 +29,15 @@ export declare class KnowledgeBase {
      * Loads facts from the facts.json file.
      */
     private loadFacts;
+    /**
+     * Loads sources from the sources.json file.
+     */
+    private loadSources;
+    /**
+     * Migrates old-format facts (sources: string[]) to new format (sourceIds: number[]).
+     * Runs once after loading if old-format data is detected.
+     */
+    private migrateOldSourcesIfNeeded;
     /**
      * Loads metadata from the kb.json file.
      */
@@ -33,6 +51,10 @@ export declare class KnowledgeBase {
      */
     private saveFacts;
     /**
+     * Saves sources to the sources.json file.
+     */
+    private saveSources;
+    /**
      * Saves metadata to the kb.json file.
      */
     private saveMetadata;
@@ -44,6 +66,10 @@ export declare class KnowledgeBase {
      * Returns all facts in the knowledge base.
      */
     getAllFacts(): Fact[];
+    /**
+     * Returns all sources in the knowledge base.
+     */
+    getAllSources(): Source[];
     /**
      * Returns the knowledge base metadata.
      */
@@ -93,6 +119,30 @@ export declare class KnowledgeBase {
      */
     searchFactsByContent(query: string): Fact[];
     /**
+     * Finds a source by its ID.
+     */
+    findSourceById(id: number): Source | undefined;
+    /**
+     * Finds a source by URL (for deduplication of url-type sources).
+     */
+    findSourceByUrl(url: string): Source | undefined;
+    /**
+     * Finds the maximum source ID currently in use.
+     */
+    private getMaxSourceId;
+    /**
+     * Generates the next available source ID.
+     */
+    getNextSourceId(): number;
+    /**
+     * Creates a new source. For url-type sources, deduplicates by URL.
+     */
+    createSource(type: 'person' | 'url', title: string, url?: string, addedAt?: string): Source;
+    /**
+     * Removes a source by ID.
+     */
+    removeSourceById(id: number): boolean;
+    /**
      * Finds the maximum fact ID currently in use.
      */
     private getMaxFactId;
@@ -108,7 +158,7 @@ export declare class KnowledgeBase {
      * Creates a new fact with an auto-generated ID.
      * Topics will be created if they don't exist (as non-persistent auto-created topics).
      */
-    createFact(content: string, topicNames: Set<string>, sources: Set<Source>): Fact;
+    createFact(content: string, topicNames: Set<string>, sourceIds: Set<number>): Fact;
     /**
      * Inserts a new topic or updates an existing one (by name).
      */
@@ -137,7 +187,7 @@ export declare class KnowledgeBase {
     /**
      * Updates an existing fact by ID. Returns the updated fact or null if not found.
      */
-    updateFact(id: number, content: string, topicNames: Set<string>, sources: Set<Source>): Fact | null;
+    updateFact(id: number, content: string, topicNames: Set<string>, sourceIds: Set<number>): Fact | null;
     /**
      * Updates an existing topic's description. Returns the updated topic or null if not found.
      */
@@ -176,14 +226,16 @@ export declare class KnowledgeBase {
     /**
      * Applies a single staged change by dispatching to the appropriate CRUD method.
      * Returns a human-readable result message.
+     * Optionally accepts a BatchApplyContext for refId -> actualId mapping.
      */
-    applyStagedChange(change: StagedChange): string;
+    applyStagedChange(change: StagedChange, context?: BatchApplyContext): string;
     /**
      * Returns statistics about the knowledge base.
      */
     getStats(): {
         totalTopics: number;
         totalFacts: number;
+        totalSources: number;
         averageTopicsPerFact: number;
     };
     /**
@@ -192,7 +244,7 @@ export declare class KnowledgeBase {
      */
     static initializeKnowledgeBase(kbPath: string): void;
     /**
-     * Creates topics.json and facts.json if they don't exist.
+     * Creates topics.json, facts.json, and sources.json if they don't exist.
      * REQUIRES kb.json to exist first.
      */
     private ensureDataFilesExist;

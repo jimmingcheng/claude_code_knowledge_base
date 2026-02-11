@@ -1,45 +1,44 @@
 import { Topic } from './Topic';
 
 /**
- * Type alias for source representation - can be expanded later if needed.
- */
-export type Source = string;
-
-/**
  * Represents a fact in the knowledge base system.
- * Facts contain content, are categorized by topics, and have sources.
+ * Facts contain content, are categorized by topics, and reference sources by ID.
  */
 export class Fact {
   public readonly id: number;
   public readonly content: string;
   public readonly topics: Set<string>;
-  public readonly sources: Set<Source>;
+  public readonly sourceIds: Set<number>;
 
   constructor(
     id: number,
     content: string,
     topics: Set<string>,
-    sources: Set<Source>
+    sourceIds: Set<number>
   ) {
     this.id = id;
     this.content = content;
     this.topics = new Set(topics); // Create a copy to ensure immutability
-    this.sources = new Set(sources); // Create a copy to ensure immutability
+    this.sourceIds = new Set(sourceIds); // Create a copy to ensure immutability
   }
 
   /**
    * Creates a Fact instance from a plain object (e.g., from JSON data).
+   * Handles backward compatibility: reads old `sources: string[]` field as empty sourceIds.
+   * Migration of old string sources to Source entities happens in KnowledgeBase.
    */
   static fromObject(obj: {
     id: number;
     content: string;
-    topics: string[]; // Array of topic names
-    sources: Source[];
+    topics: string[];
+    sourceIds?: number[];
+    sources?: string[]; // backward compat
   }): Fact {
     const topics = new Set(obj.topics);
-    const sources = new Set(obj.sources);
+    // Use sourceIds if present; if old-format sources field, leave empty (migration in KnowledgeBase)
+    const sourceIds = new Set(obj.sourceIds ?? []);
 
-    return new Fact(obj.id, obj.content, topics, sources);
+    return new Fact(obj.id, obj.content, topics, sourceIds);
   }
 
   /**
@@ -49,13 +48,13 @@ export class Fact {
     id: number;
     content: string;
     topics: string[];
-    sources: Source[];
+    sourceIds: number[];
   } {
     return {
       id: this.id,
       content: this.content,
       topics: Array.from(this.topics),
-      sources: Array.from(this.sources),
+      sourceIds: Array.from(this.sourceIds),
     };
   }
 
@@ -109,10 +108,10 @@ export class Fact {
   }
 
   /**
-   * Checks if this fact has a specific source.
+   * Checks if this fact has a specific source by ID.
    */
-  hasSource(source: Source): boolean {
-    return this.sources.has(source);
+  hasSourceId(id: number): boolean {
+    return this.sourceIds.has(id);
   }
 
   /**

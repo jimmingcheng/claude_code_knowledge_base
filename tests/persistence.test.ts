@@ -71,7 +71,8 @@ describe('File Persistence', () => {
   test('facts.json structure is correct', () => {
     const kb = createKnowledgeBase(testDir);
     kb.setMetadata('Test KB', 'Test');
-    kb.createFact('Fact content', new Set(['topic1', 'topic2']), new Set(['source1']));
+    const source = kb.createSource('url', 'Example', 'https://example.com');
+    kb.createFact('Fact content', new Set(['topic1', 'topic2']), new Set([source.id]));
 
     const factsJsonPath = path.join(testDir, 'facts.json');
     expect(fs.existsSync(factsJsonPath)).toBe(true);
@@ -83,6 +84,16 @@ describe('File Persistence', () => {
     expect(data[0]).toHaveProperty('id');
     expect(data[0]).toHaveProperty('content', 'Fact content');
     expect(data[0].topics).toEqual(['topic1', 'topic2']);
-    expect(data[0].sources).toEqual(['source1']);
+    expect(data[0].sourceIds).toEqual([source.id]);
+
+    // Verify sources.json was also created
+    const sourcesJsonPath = path.join(testDir, 'sources.json');
+    expect(fs.existsSync(sourcesJsonPath)).toBe(true);
+    const sourcesData = JSON.parse(fs.readFileSync(sourcesJsonPath, 'utf-8'));
+    expect(sourcesData.length).toBe(1);
+    expect(sourcesData[0]).toHaveProperty('id', source.id);
+    expect(sourcesData[0]).toHaveProperty('type', 'url');
+    expect(sourcesData[0]).toHaveProperty('title', 'Example');
+    expect(sourcesData[0]).toHaveProperty('url', 'https://example.com');
   });
 });

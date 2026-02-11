@@ -1,8 +1,9 @@
 // Main exports for the Claude Code Knowledge Base TypeScript library
 
 export { Topic } from './Topic';
-export { Fact, Source } from './Fact';
-export { KnowledgeBase } from './KnowledgeBase';
+export { Fact } from './Fact';
+export { Source, SourceType } from './Source';
+export { KnowledgeBase, BatchApplyContext } from './KnowledgeBase';
 export { KnowledgeBaseMetadata } from './KnowledgeBaseMetadata';
 
 // Staged changes types
@@ -22,11 +23,9 @@ export type {
   MergeTopicsParams,
   RenameTopicParams,
   SetTopicPersistenceParams,
-  SaveLinkParams,
+  AddSourceParams,
+  RemoveSourceParams,
 } from './StagedChange';
-
-// Re-export types for convenience
-export type { Source as SourceType } from './Fact';
 
 // Import for internal use
 import { KnowledgeBase } from './KnowledgeBase';
