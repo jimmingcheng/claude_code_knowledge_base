@@ -5,12 +5,24 @@ description: |
   Saves source URLs via CLI - include relevant URLs from conversation when invoking for knowledge additions.
 
   IMPORTANT TWO-PHASE APPROVAL WORKFLOW FOR MUTATIONS:
-  When this agent returns a message containing "staged" changes or proposed changes,
-  you MUST use AskUserQuestion to show the user the proposed changes and get explicit
-  approval BEFORE re-invoking this agent. Never auto-approve on behalf of the user.
-  Flow: (1) Invoke agent with user request → agent stages changes and returns summary →
-  (2) YOU use AskUserQuestion to present the summary and ask user to approve/reject →
-  (3) Re-invoke agent with the user's decision (e.g. "user approved all" or "user rejected 2,4").
+  When this agent returns staged/proposed changes, you MUST present the agent's summary
+  to the user and use AskUserQuestion with structured options BEFORE re-invoking this agent.
+  Never auto-approve. Never ask as plain text — always use AskUserQuestion with options.
+
+  You MUST call AskUserQuestion with EXACTLY these 3 options (do NOT omit any):
+    question: "How would you like to proceed with these [N] proposed changes?"
+    header: "KB Changes"
+    options (ALL 3 REQUIRED):
+      1. label: "Accept all"    — description: "Apply all proposed changes to the knowledge base"
+      2. label: "Reject all"    — description: "Discard all proposed changes"
+      3. label: "Cherry-pick"   — description: "Choose specific changes to accept or reject by ID"
+
+  Then re-invoke kb-agent with the decision:
+    - "Accept all" → prompt: "user approved all staged changes"
+    - "Reject all" → prompt: "user rejected all staged changes"
+    - "Cherry-pick" → ask which IDs to accept/reject, then prompt: "user approved changes [ids] and rejected changes [ids]"
+    - User typed custom response → relay it verbatim
+
   Read-only queries do not require this workflow.
 tools: Bash
 allowed-tools: Bash
@@ -82,6 +94,7 @@ Then use `$KB_CLI` for all subsequent operations. NEVER chain commands with `&&`
 **Staging:**
 - `$KB_CLI stage-changes '<json>'` - Write staged changes from JSON
 - `$KB_CLI list-staged` - Output current staged changes as JSON
+- `$KB_CLI format-staged` - Output formatted markdown summary of staged changes
 - `$KB_CLI apply-staged all` - Apply all staged changes
 - `$KB_CLI apply-staged <id1,id2,...>` - Apply selected staged changes
 - `$KB_CLI reject-staged all` - Reject all staged changes
@@ -123,9 +136,12 @@ When the user requests any mutation:
      - `stagingReasons`: Array of reasons (e.g., `["batch"]`, `["conflict"]`, `["reorganization"]`)
      - `conflicts`: (optional) Array of conflict context if this change conflicts with existing data
      - `group`: (optional) Grouping label for related changes
+   - When adding facts that reference topics not yet in the KB, include explicit `add-topic`
+     operations in the staged changes for each new topic (non-persistent). This ensures the
+     user sees ALL changes including new topics.
 
 4. **Write staged changes**: `$KB_CLI stage-changes '<json>'`
-5. **Return a summary**: Format a clear, human-readable summary for the parent to present to the user
+5. **Return formatted summary**: Run `$KB_CLI format-staged` and return its output verbatim to the parent
 
 ### Staging Reasons
 
@@ -140,28 +156,7 @@ Use these staging reasons to help the user understand why changes need review:
 
 ### Summary Format
 
-Return a message like this to the parent:
-
-```
-I've analyzed the request and staged [N] change(s) for review.
-
-**Summary**: [brief description]
-
-**Proposed Changes:**
-
-| # | Operation | Description | Reason |
-|---|-----------|-------------|--------|
-| 1 | add-fact  | Add "PostgreSQL for database" to topics: database, tech-stack | batch |
-| 2 | add-fact  | Add "React for frontend" to topics: frontend, tech-stack | batch |
-
-[If conflicts exist:]
-**Conflicts detected:**
-- Change #3 conflicts with existing fact #12: "[existing content]"
-  New: "[new content]"
-  Reason: [conflict description]
-
-The user should review these changes and approve or reject them.
-```
+After writing staged changes with `$KB_CLI stage-changes`, call `$KB_CLI format-staged` to get a formatted summary. Return the output of this command verbatim to the parent — do NOT reformat or rewrite it.
 
 ### StagedChangesFile JSON Format
 

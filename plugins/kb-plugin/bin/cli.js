@@ -105,6 +105,7 @@ function main() {
         console.log('Staged Changes:');
         console.log("  stage-changes '<json>'         - Write staged changes from JSON input");
         console.log('  list-staged                    - Output current staged changes as JSON');
+        console.log('  format-staged                  - Output formatted markdown summary of staged changes');
         console.log('  apply-staged all               - Apply all staged changes');
         console.log('  apply-staged <id1,id2,...>      - Apply selected staged changes');
         console.log('  reject-staged all              - Reject all staged changes');
@@ -467,6 +468,96 @@ function main() {
                 break;
             }
             console.log(JSON.stringify(staged, null, 2));
+            break;
+        }
+        case 'format-staged': {
+            const staged = kb.loadStagedChanges();
+            if (!staged) {
+                console.log('No staged changes');
+                break;
+            }
+            // Group changes by category
+            const factOps = new Set(['add-fact', 'update-fact', 'remove-fact']);
+            const topicOps = new Set(['add-topic', 'update-topic', 'remove-topic', 'merge-topics', 'rename-topic', 'set-topic-persistence']);
+            const linkOps = new Set(['save-link']);
+            const factChanges = staged.changes.filter(c => factOps.has(c.operation));
+            const topicChanges = staged.changes.filter(c => topicOps.has(c.operation));
+            const linkChanges = staged.changes.filter(c => linkOps.has(c.operation));
+            const otherChanges = staged.changes.filter(c => !factOps.has(c.operation) && !topicOps.has(c.operation) && !linkOps.has(c.operation));
+            // Escape pipe characters in table cell values
+            const esc = (s) => s.replace(/\|/g, '\\|');
+            // Header line
+            console.log(`Staged ${staged.changes.length} change(s) — ${staged.summary}`);
+            // Fact changes table
+            if (factChanges.length > 0) {
+                console.log('');
+                console.log('**Fact Changes:**');
+                console.log('');
+                console.log('| # | Operation | Content | Topics | Reason |');
+                console.log('|---|-----------|---------|--------|--------|');
+                for (const c of factChanges) {
+                    const p = c.params;
+                    const content = esc(String(p.content || c.description));
+                    const topics = Array.isArray(p.topics) ? p.topics.join(', ') : '';
+                    const reason = c.stagingReasons.join(', ');
+                    console.log(`| ${c.id} | ${c.operation} | ${esc(content)} | ${esc(topics)} | ${esc(reason)} |`);
+                }
+            }
+            // Topic changes table
+            if (topicChanges.length > 0) {
+                console.log('');
+                console.log('**Topic Changes:**');
+                console.log('');
+                console.log('| # | Operation | Description | Reason |');
+                console.log('|---|-----------|-------------|--------|');
+                for (const c of topicChanges) {
+                    const reason = c.stagingReasons.join(', ');
+                    console.log(`| ${c.id} | ${c.operation} | ${esc(c.description)} | ${esc(reason)} |`);
+                }
+            }
+            // Link changes table
+            if (linkChanges.length > 0) {
+                console.log('');
+                console.log('**Link Changes:**');
+                console.log('');
+                console.log('| # | Operation | URL | Title | Reason |');
+                console.log('|---|-----------|-----|-------|--------|');
+                for (const c of linkChanges) {
+                    const p = c.params;
+                    const url = esc(String(p.url || ''));
+                    const title = esc(String(p.title || ''));
+                    const reason = c.stagingReasons.join(', ');
+                    console.log(`| ${c.id} | ${c.operation} | ${url} | ${title} | ${esc(reason)} |`);
+                }
+            }
+            // Other changes table
+            if (otherChanges.length > 0) {
+                console.log('');
+                console.log('**Other Changes:**');
+                console.log('');
+                console.log('| # | Operation | Description | Reason |');
+                console.log('|---|-----------|-------------|--------|');
+                for (const c of otherChanges) {
+                    const reason = c.stagingReasons.join(', ');
+                    console.log(`| ${c.id} | ${c.operation} | ${esc(c.description)} | ${esc(reason)} |`);
+                }
+            }
+            // Conflict details
+            const changesWithConflicts = staged.changes.filter(c => c.conflicts && c.conflicts.length > 0);
+            if (changesWithConflicts.length > 0) {
+                console.log('');
+                console.log('**Conflicts detected:**');
+                for (const c of changesWithConflicts) {
+                    for (const conflict of c.conflicts) {
+                        console.log(`- Change #${c.id} conflicts with existing fact #${conflict.existingFactId}: "${conflict.existingFactContent}"`);
+                        const p = c.params;
+                        if (p.content) {
+                            console.log(`  New: "${p.content}"`);
+                        }
+                        console.log(`  Reason: ${conflict.conflictDescription}`);
+                    }
+                }
+            }
             break;
         }
         case 'apply-staged': {
